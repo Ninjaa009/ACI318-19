@@ -25,3 +25,8 @@
 - [Chapter 18 — Earthquake-Resistant Structures](chapters/chapter-18.md)
 - [Chapter 19 — Concrete: Design and Durability Requirements](chapters/chapter-19.md)
 - [Chapter 20 — Steel Reinforcement Properties, Durability, and Embedments](chapters/chapter-20.md)
+- [Chapter 21 — Strength Reduction Factors](chapters/chapter-21.md)
+- [Chapter 22 — Sectional Strength](chapters/chapter-22.md)
+- [Chapter 23 — Strut-and-Tie Method](chapters/chapter-23.md)
+- [Chapter 24 — Serviceability](chapters/chapter-24.md)
+- [Chapter 25 — Reinforcement Details](chapters/chapter-25.md)
