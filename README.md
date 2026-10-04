@@ -6,3 +6,4 @@
 ## สารบัญ
 
 - [Chapter 1 — General](chapters/chapter-01.md)
+- [Chapter 2 — Notation and Terminology](chapters/chapter-02.md)
