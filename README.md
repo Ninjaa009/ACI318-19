@@ -20,3 +20,8 @@
 - [Chapter 13 — Foundations](chapters/chapter-13.md)
 - [Chapter 14 — Plain Concrete](chapters/chapter-14.md)
 - [Chapter 15 — Beam-Column and Slab-Column Joints](chapters/chapter-15.md)
+- [Chapter 16 — Connections Between Members](chapters/chapter-16.md)
+- [Chapter 17 — Anchoring to Concrete](chapters/chapter-17.md)
+- [Chapter 18 — Earthquake-Resistant Structures](chapters/chapter-18.md)
+- [Chapter 19 — Concrete: Design and Durability Requirements](chapters/chapter-19.md)
+- [Chapter 20 — Steel Reinforcement Properties, Durability, and Embedments](chapters/chapter-20.md)
