@@ -11,3 +11,8 @@
 - [Chapter 4 — Structural System Requirements](chapters/chapter-04.md)
 - [Chapter 5 — Loads](chapters/chapter-05.md)
 - [Chapter 10 — Columns](chapters/chapter-10.md)
+- [Chapter 11 — Walls](chapters/chapter-11.md)
+- [Chapter 12 — Diaphragms](chapters/chapter-12.md)
+- [Chapter 13 — Foundations](chapters/chapter-13.md)
+- [Chapter 14 — Plain Concrete](chapters/chapter-14.md)
+- [Chapter 15 — Beam-Column and Slab-Column Joints](chapters/chapter-15.md)
