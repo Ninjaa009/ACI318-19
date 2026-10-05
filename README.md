@@ -30,3 +30,5 @@
 - [Chapter 23 — Strut-and-Tie Method](chapters/chapter-23.md)
 - [Chapter 24 — Serviceability](chapters/chapter-24.md)
 - [Chapter 25 — Reinforcement Details](chapters/chapter-25.md)
+- [Chapter 26 — Construction Documents and Inspection](chapters/chapter-26.md)
+- [Chapter 27 — Strength Evaluation of Existing Structures](chapters/chapter-27.md)
