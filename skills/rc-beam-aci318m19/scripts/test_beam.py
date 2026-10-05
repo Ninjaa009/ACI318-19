@@ -111,6 +111,10 @@ check("N4 ℓdh DB25", ldh(25, 420, 28)["ldh"],
       max(420 * 1.6 * 1.25 * pc / (23 * sfc) * 25 ** 1.5, 200, 150))
 check("N4 compression lap DB25 SD40", lap_compression(25, 420, 28), 0.071 * 420 * 25)
 
+pc41 = 41 / 105 + 0.6
+check("N4 ℓdh f′c 41 → ψc = f′c/105 + 0.6 (318M-19 limit 42 MPa)", ldh(25, 420, 41)["ldh"],
+      max(420 * 1.6 * 1.25 * pc41 / (23 * math.sqrt(41)) * 25 ** 1.5, 200, 150))
+
 # ---------------------------------------------------------------- N5 misc (new)
 check("N5 min depth simple 6 m SD40", min_depth(6000, "simple", 420), 6000 / 16)
 check("N5 min depth SD50", min_depth(6000, "simple", 490.3), 6000 / 16 * (0.4 + 490.3 / 700))

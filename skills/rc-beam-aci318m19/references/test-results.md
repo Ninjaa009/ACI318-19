@@ -2,7 +2,6 @@
 
 รันด้วย `python3 scripts/test_beam.py` — วันที่ 2026-10-05
 
-
 | # | การทดสอบ | ได้ | คาดหมาย | ผล |
 |---|---|---|---|---|
 | 1 | T1 As,req singly (mm²) | 1,327 | 1,327 | ✅ |
@@ -36,14 +35,15 @@
 | 29 | N4 ℓd DB19 bottom → 2.1 row | 718.1 | 718.1 | ✅ |
 | 30 | N4 ℓdh DB25 | 747.7 | 747.7 | ✅ |
 | 31 | N4 compression lap DB25 SD40 | 745.5 | 745.5 | ✅ |
-| 32 | N5 min depth simple 6 m SD40 | 375 | 375 | ✅ |
-| 33 | N5 min depth SD50 | 412.7 | 412.7 | ✅ |
-| 34 | N5 crack s,max cc=50 | 255 | 255 | ✅ |
-| 35 | N6 kgf-m φMn = SI φMn | 2.751e+08 | 2.751e+08 | ✅ |
-| 36 | N6 kgf-m stirrup s | 250 | 250 | ✅ |
-| 37 | N6 report renders | True | True | ✅ |
-| 38 | N7 deep beam stops | True | True | ✅ |
-| 39 | N8 Mu<0 → tension top | True | True | ✅ |
-| 40 | N8 top bar ψt = 1.3 | 1.3 | 1.3 | ✅ |
+| 32 | N4 ℓdh f′c 41 → ψc = f′c/105 + 0.6 (318M-19 limit 42 MPa) | 706.2 | 706.2 | ✅ |
+| 33 | N5 min depth simple 6 m SD40 | 375 | 375 | ✅ |
+| 34 | N5 min depth SD50 | 412.7 | 412.7 | ✅ |
+| 35 | N5 crack s,max cc=50 | 255 | 255 | ✅ |
+| 36 | N6 kgf-m φMn = SI φMn | 2.751e+08 | 2.751e+08 | ✅ |
+| 37 | N6 kgf-m stirrup s | 250 | 250 | ✅ |
+| 38 | N6 report renders | True | True | ✅ |
+| 39 | N7 deep beam stops | True | True | ✅ |
+| 40 | N8 Mu<0 → tension top | True | True | ✅ |
+| 41 | N8 top bar ψt = 1.3 | 1.3 | 1.3 | ✅ |
 
-40/40 passed
+41/41 passed

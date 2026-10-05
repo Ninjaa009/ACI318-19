@@ -392,7 +392,7 @@ def ld_tension(db, fy, fc, top=False, epoxy=None, lam=1.0, good=True,
 
 def ldh(db, fy, fc, lam=1.0, epoxy=False, psi_r=1.6, psi_o=1.25):
     """25.4.3. Conservative defaults psi_r=1.6, psi_o=1.25 unless confirmed."""
-    pc = fc / 105.0 + 0.6 if fc < 40.0 else 1.0
+    pc = fc / 105.0 + 0.6 if fc < 42.0 else 1.0            # Table 25.4.3.2 (318M-19: f′c < 42 MPa)
     pe = 1.2 if epoxy else 1.0
     sfc = min(math.sqrt(fc), SQRT_FC_MAX)
     val = fy * pe * psi_r * psi_o * pc / (23.0 * lam * sfc) * db ** 1.5
@@ -740,7 +740,7 @@ def report(res: dict) -> str:
     L.append("")
     L.append("_สมมติฐาน: ACI 318M-19 · หน่วยภายใน N–mm–MPa · Es = 200,000 MPa · "
              + ("ใช้ข้อยกเว้น εty = 0.002 (Grade 420)" if res['input'].get('grade420_exception') else "εty = fy/Es")
-             + " · ค่าคงที่ SI ตรวจด้วยการแปลงหน่วยจาก 318-19 (ยังไม่เทียบเล่ม 318M ฉบับพิมพ์) · ผลนี้ใช้ประกอบรายการคำนวณ วิศวกรผู้รับผิดชอบต้องตรวจและลงนาม_")
+             + " · ค่าคงที่ SI เทียบเล่ม 318M-19 แล้ว · ผลนี้ใช้ประกอบรายการคำนวณ วิศวกรผู้รับผิดชอบต้องตรวจและลงนาม_")
     return "\n".join(L)
 
 
