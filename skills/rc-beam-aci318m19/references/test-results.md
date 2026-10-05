@@ -1,49 +1,69 @@
-# ผลทดสอบ beam.py
+# ผลทดสอบ beamkit
 
-รันด้วย `python3 scripts/test_beam.py` — วันที่ 2026-10-05
+รัน `python3 scripts/test_beam.py` (Python 3.11, ไม่ใช้ไลบรารีภายนอก)
 
-| # | การทดสอบ | ได้ | คาดหมาย | ผล |
-|---|---|---|---|---|
-| 1 | T1 As,req singly (mm²) | 1,327 | 1,327 | ✅ |
-| 2 | T1 bars | 3 | 3 | ✅ |
-| 3 | T1 φMn (N·mm) | 2.751e+08 | 2.751e+08 | ✅ |
-| 4 | T1 εt | 0.01282 | 0.01282 | ✅ |
-| 5 | T2 doubly found | True | True | ✅ |
-| 6 | T2 φMn ≥ Mu | True | True | ✅ |
-| 7 | T2 strain ok | True | True | ✅ |
-| 8 | T2 φMn regression (kN·m) | 346.9 | 346.9 | ✅ |
-| 9 | T3 c (mm) | 178.6 | 178.6 | ✅ |
-| 10 | T3 εt | 0.006031 | 0.00603 | ✅ |
-| 11 | T3 φMn (kN·m) | 497.8 | 497.8 | ✅ |
-| 12 | T3 d ≠ dt | True | True | ✅ |
-| 13 | E2 strain limit fails | True | True | ✅ |
-| 14 | E5 Vc eq.(a) (N) | 1.451e+05 | 1.451e+05 | ✅ |
-| 15 | E5 s (mm) | 250 | 250 | ✅ |
-| 16 | E5 φVn (N) | 2.152e+05 | 2.152e+05 | ✅ |
-| 17 | E5 s=700 → eq.(c) | 1.182e+05 | 1.182e+05 | ✅ |
-| 18 | E5 s=700 Av<Av,min flagged | True | True | ✅ |
-| 19 | N1 fyt used = 420 | 420 | 420 | ✅ |
-| 20 | N1 Vs uses 420 | 1.773e+05 | 1.773e+05 | ✅ |
-| 21 | N2 leg spacing (mm) | 710 | 710 | ✅ |
-| 22 | N2 2 legs fail across 800 mm | True | True | ✅ |
-| 23 | N2 4 legs pass | True | True | ✅ |
-| 24 | N3 h ≤ 250 exempt, no stirrups | True | True | ✅ |
-| 25 | N4 ℓd DB25 SD40 bottom | 1,167 | 1,167 | ✅ |
-| 26 | N4 ℓd DB25 SD50 ψg=1.15 | 1,567 | 1,567 | ✅ |
-| 27 | N4 ℓd DB16 top other | 1,179 | 1,179 | ✅ |
-| 28 | N4 ℓd DB20 bottom → larger-bar row (1.7) | 933.8 | 933.8 | ✅ |
-| 29 | N4 ℓd DB19 bottom → 2.1 row | 718.1 | 718.1 | ✅ |
-| 30 | N4 ℓdh DB25 | 747.7 | 747.7 | ✅ |
-| 31 | N4 compression lap DB25 SD40 | 745.5 | 745.5 | ✅ |
-| 32 | N4 ℓdh f′c 41 → ψc = f′c/105 + 0.6 (318M-19 limit 42 MPa) | 706.2 | 706.2 | ✅ |
-| 33 | N5 min depth simple 6 m SD40 | 375 | 375 | ✅ |
-| 34 | N5 min depth SD50 | 412.7 | 412.7 | ✅ |
-| 35 | N5 crack s,max cc=50 | 255 | 255 | ✅ |
-| 36 | N6 kgf-m φMn = SI φMn | 2.751e+08 | 2.751e+08 | ✅ |
-| 37 | N6 kgf-m stirrup s | 250 | 250 | ✅ |
-| 38 | N6 report renders | True | True | ✅ |
-| 39 | N7 deep beam stops | True | True | ✅ |
-| 40 | N8 Mu<0 → tension top | True | True | ✅ |
-| 41 | N8 top bar ψt = 1.3 | 1.3 | 1.3 | ✅ |
+```
+== flexure: hand calc (singly) ==
+PASS  d: got 540.0 expected 540
+PASS  φMn = 0.9As·fy(d − a/2): got 238948472.4456558 expected 238948472.4456558
+PASS  c = a/β1: got 86.96450252151678 expected 86.96450252151675
+PASS  As,min = max(0.25√fc,1.4)bd/fy: got 539.9999999999999 expected 539.9999999999999
+PASS  As,min fy capped 550: got 381.81818181818176 expected 381.81818181818176
+== flexure: strip model (doubly, two layers) ==
+PASS  Mn [[4, 25], [2, 25]] vs [[3, 25]] f′c28: got 571898079.139177 expected 571702601.5821643
+PASS  c  [[4, 25], [2, 25]] vs [[3, 25]] f′c28: got 132.6210156629557 expected 132.58823529411762
+PASS  Mn [[3, 16]] vs [[5, 20], [2, 20]] f′c35: got 148951525.85749424 expected 148937777.51955238
+PASS  c  [[3, 16]] vs [[5, 20], [2, 20]] f′c35: got 63.319011211622694 expected 63.339568024678144
+PASS  Mn [[2, 12]] vs [[6, 25], [3, 25]] f′c24: got 82868843.5711689 expected 82907692.75401792
+PASS  c  [[2, 12]] vs [[6, 25], [3, 25]] f′c24: got 71.65782182690918 expected 71.64705882352942
+PASS  over-reinforced → εt < εty + 0.003 → fail: got False expected False
+PASS  no demand → ok regardless: got True expected True
+== shear ==
+PASS  Vc (a) = 0.17√fc·b·d: got 140600.5161725945 expected 140600.5161725945
+PASS  Vs = Av·fyt·d/s: got 229147.7681528395 expected 229147.7681528395
+PASS  s,max = d/2: got 260.5 expected 260.5
+PASS  trigger = φ0.083√fc·bw·d: got 51484.60077496475 expected 51484.60077496475
+PASS  Av < Av,min → Vc (c) with λs: got '(c)' expected '(c)'
+PASS  Vc (c) value: got 93944.63852627361 expected 93944.63852627361
+PASS  fyt capped at 420: got 420.0 expected 420.0
+PASS  Vs > 0.33√fc·bw·d → s,max = min(d/4, 300): got 135.0 expected 135.0
+PASS  §22.5.1.2 limit: got 533621.5819286173 expected 533621.5819286173
+PASS  leg spacing 610 > d → fails transverse limit: got False expected False
+== detailing / development ==
+PASS  crack s,max (fs = 2fy/3, cc 50): got 281.83150650012743 expected 281.8315065001275
+PASS  h,min both ends fy 420 = ℓn/21: got 285.7142857142857 expected 285.7142857142857
+PASS  h,min × (0.4 + fy/700): got 274.40816326530614 expected 274.40816326530614
+PASS  ℓd DB16 (2.1): got 570.3858322704059 expected 570.3858322704059
+PASS  ℓd DB20 (1.7, larger bar): got 1.7 expected 1.7
+PASS  ℓd top bar ψt 1.3: got 1517.4161931105739 expected 1517.4161931105739
+PASS  ℓd poor spacing → 1.1: got 1.1 expected 1.1
+PASS  ψc f′c < 42: got 0.8666666666666667 expected 0.8666666666666667
+PASS  lap compression fy 420: got 745.4999999999999 expected 745.4999999999999
+PASS  IMF hoop s = min(d/4, 8db, 24dt, 300): got 128 expected 128.0
+PASS  bars per layer DB25 b300: got 4 expected 4
+PASS  split 6-DB25 → 4 + 2: got [[4, 25], [2, 25]] expected [[4, 25], [2, 25]]
+PASS  inflection point UDL fixed-fixed: got 1267.9491924311035 expected 1267.92
+== engine ==
+PASS  B1 design passes: got True expected True
+PASS  B1 bottom is minimal (n−1 fails): got False expected False
+PASS  B1 left top is minimal (n−1 fails): got False expected False
+PASS  kgf-m and SI give same bars: got True expected True
+PASS  kgf-m and SI same φMn: got 182294280.5055256 expected 182294280.5055256
+PASS  B2 check passes: got True expected True
+PASS  B2 left top φMn: got 514.7082712252593 expected 514.7
+PASS  deep beam stops: got True expected True
+PASS  SMF stops: got True expected True
+PASS  check mode: RB9 flagged (§9.7.6.4): got False expected False
+PASS  design mode: RB9 bumped to DB10: got 10.0 expected 10.0
+PASS  impossible design stops: got True expected True
+== IMF ==
+PASS  IMF design passes: got True expected True
+PASS  IMF Ve = (Mnl + Mnr)/ℓn + wuℓn/2: got 192907.32288463297 expected 192907.32288463297
+PASS  IMF Mn+ ≥ Mn−/3 at faces: got True expected True
+PASS  IMF end hoops ≤ 8db: got True expected True
+PASS  IMF end zone ≥ 2h: got True expected True
+PASS  IMF raises bottom bars for Mn+ ≥ Mn−/3: got True expected True
+PASS  perimeter: continuous top ≥ max(2, ⅙): got True expected True
 
-41/41 passed
+55 passed, 0 failed
+```

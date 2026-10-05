@@ -1,0 +1,16 @@
+{
+  "mode": "design",
+  "units": "kgf-m",
+  "system": "IMF",
+  "section": {"b": 0.30, "h": 0.60},
+  "materials": {"fc": 280, "fy": 4000, "fyt": 4000},
+  "cover": 40,
+  "stirrups": {"db": 10, "legs": 2},
+  "design": {"db_options": [16, 20, 25], "max_layers": 2},
+  "span": {"ln": 6.0, "support": "both_ends", "position": "perimeter", "wu": 4500},
+  "combos": [
+    {"name": "1.2D+1.0L", "M_left": -12500, "M_mid": 8000, "M_right": -13000, "V_left": 13000, "V_right": 13500},
+    {"name": "1.2D+1.0L+1.0E", "M_left": -21000, "M_mid": 7000, "M_right": -4000, "V_left": 17500, "V_right": 9000},
+    {"name": "0.9D+1.0E", "M_left": -14000, "M_mid": 4000, "M_right": 5500, "V_left": 12000, "V_right": 3000}
+  ]
+}

@@ -72,7 +72,7 @@ SMF (§18.7), โครง sway, เสากลม/ปลอกเกลีย�
 
 ## ไฟล์
 
-- `scripts/colkit/` — `section` (หน้าตัด), `pmm` (interaction แบบตัด polygon แม่นตรง), `stability`, `shear`, `detailing`, `engine` (check/design), `report`
+- `scripts/colkit/` — `section` (หน้าตัด), `pmm` (interaction แบบตัด polygon แม่นตรง), `stability`, `shear`, `detailing`, `engine` (check/design), `report`, `rcsi` (โมดูลร่วมกับสกิลคาน)
 - `scripts/column.py` — CLI · `scripts/test_column.py` — เทียบค่ามือ + fiber model ที่เขียนแยก
 - `kb/` — สรุป ACI 318-19 บท 6, 10, 15, 16, 18, 19, 20, 21, 22, 25 + `INDEX.md`
 - `references/si-formulas.md`, `references/si-constants-318m.md`, `references/test-results.md`

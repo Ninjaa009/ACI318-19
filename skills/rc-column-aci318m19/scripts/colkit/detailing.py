@@ -5,9 +5,7 @@ from __future__ import annotations
 
 import math
 
-from .section import area
-
-SMALL_BAR = 19.5        # "No. 19 and smaller" (19.1 mm); DB20 counts as a larger bar
+from .rcsi import SMALL_BAR, area, psi_g, ld_tension, lap_compression  # noqa: F401
 
 
 def longitudinal_limits(col, dagg=20.0, rho_max=0.08):
@@ -46,24 +44,11 @@ def imf_end_zone(col, lu, so):
             "lo": lo, "first": so_max / 2.0}
 
 
-def psi_g(fy):
-    """Table 25.4.2.5: Grade 280/420 → 1.0, 550 → 1.15, 690 → 1.3."""
-    return 1.0 if fy <= 420 + 1e-6 else (1.15 if fy <= 550 + 1e-6 else 1.3)
-
-
 def splices(col, s, legs_x, legs_y):
     fy, db = col.fy_spec, col.db
-    sq = min(math.sqrt(col.fc), 8.3)                                     # 25.4.1.4
-    k = 2.1 if db <= SMALL_BAR else 1.7                                  # Table 25.4.2.3 (ties ≥ code min)
-    ld = max(fy * psi_g(fy) / (k * sq) * db, 300.0)                      # ψt = ψe = 1.0
-    if fy <= 420 + 1e-6:
-        lsc = 0.071 * fy * db                                            # 25.5.5.1(a)
-    elif fy <= 550 + 1e-6:
-        lsc = (0.13 * fy - 24.0) * db                                    # 25.5.5.1(b)
-    else:
-        lsc = None
-    if lsc is not None:
-        lsc = max(lsc, 300.0) * (4.0 / 3.0 if col.fc < 21 else 1.0)      # 25.5.5.2
+    L = ld_tension(db, fy, col.fc)                                       # Table 25.4.2.3 (ties ≥ code min)
+    ld, k = L["ld"], L["k"]
+    lsc = lap_compression(db, fy, col.fc)                                # 25.5.5.1–2
     At = area(col.tie_db)
     # §10.7.5.2.1(a): legs perpendicular to the dimension considered
     ok_h = legs_x * At >= 0.0015 * col.h * s

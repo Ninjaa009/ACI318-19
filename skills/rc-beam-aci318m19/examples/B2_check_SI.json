@@ -1,0 +1,18 @@
+{
+  "mode": "check",
+  "units": "SI",
+  "system": null,
+  "section": {"b": 300, "h": 600},
+  "materials": {"fc": 28, "fy": 420, "fyt": 420},
+  "cover": 40,
+  "bars": {
+    "left":  {"top": [[4, 25], [2, 25]], "bot": [[3, 25]]},
+    "mid":   {"top": [[2, 25]],          "bot": [[3, 25]]},
+    "right": {"top": [[4, 25]],          "bot": [[3, 25]]}
+  },
+  "stirrups": {"db": 10, "legs": 2, "s_end": 150, "s_mid": 200, "end_zone": 1.5},
+  "span": {"ln": 7.0, "support": "one_end", "position": "perimeter"},
+  "combos": [
+    {"name": "1.2D+1.6L", "M_left": -480, "M_mid": 250, "M_right": -300, "V_left": 220, "V_right": 180}
+  ]
+}

@@ -4,7 +4,7 @@ from __future__ import annotations
 
 import math
 
-from .section import ES
+from .rcsi import ES
 
 
 def stability_index(sum_Pu, delta_o, Vus, lc):

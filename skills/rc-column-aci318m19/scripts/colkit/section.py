@@ -3,23 +3,7 @@ from __future__ import annotations
 
 import math
 
-ES = 200_000.0          # 20.2.2.2
-EPS_CU = 0.003          # 22.2.2.1
-FY_CAP = 550.0          # Table 22.4.2.1 / 20.2.2.4(a): fy used for strength ≤ 550 MPa
-FYT_SHEAR_CAP = 420.0   # Table 20.2.2.4(a): stirrups/ties for shear ≤ 420 MPa
-
-
-def area(db: float) -> float:
-    return math.pi * db * db / 4.0
-
-
-def beta1(fc: float) -> float:
-    """Table 22.2.2.4.3 (SI)."""
-    if fc <= 28.0:
-        return 0.85
-    if fc >= 55.0:
-        return 0.65
-    return 0.85 - 0.05 * (fc - 28.0) / 7.0
+from .rcsi import ES, EPS_CU, FY_CAP, FYT_SHEAR_CAP, area, beta1, eps_ty  # noqa: F401
 
 
 class Column:
@@ -38,7 +22,7 @@ class Column:
         self.db, self.nx, self.ny = float(db), int(nx), int(ny)
         self.cover, self.tie_db = float(cover), float(tie_db)
         self.b1 = beta1(self.fc)
-        self.eps_ty = 0.002 if (eps_ty_420 and abs(self.fy - 420) < 1e-6) else self.fy / ES
+        self.eps_ty = eps_ty(self.fy, eps_ty_420)
         self.e = self.cover + self.tie_db + self.db / 2.0       # face to bar centre
         self.bars = self._layout()
         self.Ab = area(self.db)

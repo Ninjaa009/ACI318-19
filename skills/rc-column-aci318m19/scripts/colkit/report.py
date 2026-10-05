@@ -3,36 +3,7 @@ from __future__ import annotations
 
 import math
 
-G = 9.80665
-
-
-class Fmt:
-    def __init__(self, units):
-        self.kgf = units == "kgf-m"
-
-    def F(self, n):
-        if math.isinf(n):
-            return "∞"
-        s = f"{n / 1e3:,.1f} kN"
-        return s + (f" ({n / G / 1e3:,.2f} tf)" if self.kgf else "")
-
-    def M(self, nmm):
-        if math.isinf(nmm):
-            return "∞"
-        s = f"{nmm / 1e6:,.1f} kN·m"
-        return s + (f" ({nmm / G / 1e6:,.2f} tf·m)" if self.kgf else "")
-
-    def S(self, mpa):
-        s = f"{mpa:.1f} MPa"
-        return s + (f" ({mpa / 0.0980665:,.0f} ksc)" if self.kgf else "")
-
-
-def ok(v):
-    return "✅" if v else "❌"
-
-
-def ref(*items):
-    return "\n_อ้างอิง: " + " · ".join(items) + "_\n"
+from .rcsi import Fmt, ok, ref  # noqa: E402
 
 
 def build(res):

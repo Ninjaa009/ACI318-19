@@ -4,16 +4,7 @@ from __future__ import annotations
 
 import math
 
-from .section import ES, EPS_CU
-
-
-def phi_tied(eps_t: float, eps_ty: float) -> float:
-    """Table 21.2.2, transverse reinforcement other than spirals."""
-    if eps_t <= eps_ty:
-        return 0.65
-    if eps_t >= eps_ty + 0.003:
-        return 0.90
-    return 0.65 + 0.25 * (eps_t - eps_ty) / 0.003
+from .rcsi import ES, EPS_CU, phi_tied  # noqa: F401
 
 
 def _clip_halfplane(poly, nx, ny, t0):

@@ -4,16 +4,8 @@ from __future__ import annotations
 
 import math
 
-from .section import FYT_SHEAR_CAP, area
+from .rcsi import FYT_SHEAR_CAP, PHI_V, SQRT_FC_MAX, area, av_min_s, lambda_s, s_max_shear  # noqa: F401
 from .pmm import nominal_moment
-
-PHI_V = 0.75            # Table 21.2.1(b)
-
-
-def lambda_s(d):
-    """Eq. 22.5.5.1.3 (SI)."""
-    return min(1.0, math.sqrt(2.0 / (1.0 + 0.004 * d)))
-
 
 def shear_direction(col, direction, Vu, Nu, s, legs, lam=1.0):
     """direction 'y' = shear along y (pairs with Mx): web width b, depth from h.
@@ -25,9 +17,9 @@ def shear_direction(col, direction, Vu, Nu, s, legs, lam=1.0):
     rho_w = As_t / (bw * d)
     fyt = min(col.fyt, FYT_SHEAR_CAP)                                    # 20.2.2.4(a)
     Av = legs * area(col.tie_db)
-    Av_min_s = max(0.062 * math.sqrt(col.fc), 0.35) * bw / fyt           # 10.6.2.2
+    Av_min_s = av_min_s(col.fc, bw, fyt)                                 # 10.6.2.2
     has_min = Av / s >= Av_min_s * (1 - 1e-9)
-    sq = math.sqrt(col.fc) if has_min else min(math.sqrt(col.fc), 8.3)  # 22.5.3.1–2
+    sq = math.sqrt(col.fc) if has_min else min(math.sqrt(col.fc), SQRT_FC_MAX)  # 22.5.3.1–2
     axial = min(Nu / (6 * col.Ag), 0.05 * col.fc) if Nu > 0 else Nu / (6 * col.Ag)  # 22.5.5.1.2
     Vc_a = (0.17 * lam * sq + axial) * bw * d                            # Table 22.5.5.1(a)
     Vc_c = (0.66 * lambda_s(d) * lam * rho_w ** (1 / 3) * sq + axial) * bw * d   # (c)
@@ -37,7 +29,7 @@ def shear_direction(col, direction, Vu, Nu, s, legs, lam=1.0):
     Vs = Av * fyt * d / s                                                # 22.5.8.5.3
     phiVn = PHI_V * (Vc + Vs)
     needs_min = Vu > 0.5 * PHI_V * Vc_without                            # 10.6.2.1
-    s_max = min(d / 2, 600.0) if Vs <= 0.33 * math.sqrt(col.fc) * bw * d else min(d / 4, 300.0)  # 10.7.6.5.2
+    s_max = s_max_shear(Vs, col.fc, bw, d)[0]                            # 10.7.6.5.2
     section_ok = Vu <= PHI_V * (Vc + 0.66 * math.sqrt(col.fc) * bw * d)  # 22.5.1.2
     checks = {"φVn ≥ Vu": phiVn >= Vu, "§22.5.1.2": section_ok,
               "Av,min (§10.6.2)": (not needs_min) or has_min,

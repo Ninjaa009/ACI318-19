@@ -32,3 +32,12 @@
 - [Chapter 25 — Reinforcement Details](chapters/chapter-25.md)
 - [Chapter 26 — Construction Documents and Inspection](chapters/chapter-26.md)
 - [Chapter 27 — Strength Evaluation of Existing Structures](chapters/chapter-27.md)
+
+## สกิลออกแบบ (skills/)
+
+| สกิล | ใช้ทำอะไร | แพ็กเกจ |
+|---|---|---|
+| `rc-beam-aci318m19` | ออกแบบ/ตรวจคาน คสล. ทั้งช่วง (ปลายซ้าย กลาง ปลายขวา) ทุก combo | `scripts/beamkit` |
+| `rc-column-aci318m19` | ออกแบบ/ตรวจเสา คสล. ปลอกเดี่ยว ดัดสองแกน | `scripts/colkit` |
+
+ทั้งสองสกิลใช้โครงสร้างเดียวกัน (workflow เป็นขั้น, JSON แบ่งกลุ่ม, โหมด design/check, รายงานอ้าง `kb/` ทุกหัวข้อ) และใช้โมดูลร่วม `skills/_shared/rcsi.py` (หน่วย ค่าคงที่ SI ℓd/ทาบ รูปแบบรายงาน) — แก้ที่ไฟล์นี้เท่านั้น แล้วรัน `python3 tools/build_skills.py` เพื่อคัดลอกเข้าแต่ละสกิล รัน test และสร้าง `dist/*.zip`
