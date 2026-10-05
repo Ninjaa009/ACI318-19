@@ -1,11 +1,16 @@
 #!/usr/bin/env python3
-"""RC rectangular tied column design/check per ACI 318M-19 (SI internal: N, mm, MPa).
+"""RC rectangular tied column — design/check per ACI 318M-19, organised by the
+project knowledge base (kb/chapter-XX.md). SI internal: N, mm, MPa.
 
-Scope: rectangular section, bars around the perimeter, rectilinear ties,
-non-sway frame (Q <= 0.05), axial force + biaxial bending (exact 3D
-interaction by strain compatibility), slenderness with non-sway moment
-magnification, two-way shear with Nu, OMF shear (18.3.3) on request,
-longitudinal/tie detailing, splice lengths.
+Workflow steps (same numbering as SKILL.md and the report):
+ 0 seismic system (Ch.18)      5 axial + biaxial bending (Ch.22, 21)
+ 1 section / materials         6 shear (Ch.22, 10, 18)
+ 2 forces from analysis        7 detailing (Ch.10, 25, 18)
+ 3 sway / non-sway (Ch.6)      8 splices (Ch.10, 25)
+ 4 slenderness (Ch.6)          9 joints, floor concrete, footing (Ch.15, 16)
+
+Scope: rectangular section, perimeter bars, rectilinear ties, non-sway,
+OMF or IMF (SMF stops), normalweight concrete.
 
 Usage:
     python3 column.py input.json            -> markdown report
@@ -22,10 +27,23 @@ KSC_TO_MPA = 0.0980665
 ES = 200_000.0
 ECU = 0.003
 PHI_V = 0.75
-SQRT_FC_MAX = 8.3
-FY_MAX = 550.0           # 22.4.2.1 (Pn,max) / Table 20.2.2.4(a) -- used throughout (conservative)
+SQRT_FC_MAX = 8.3        # 22.5.3.1 / 25.4.1.4
+FY_MAX = 550.0           # Table 22.4.2.1 note: fy ≤ 550 MPa (used throughout, conservative)
 FYT_SHEAR_MAX = 420.0    # Table 20.2.2.4(a)
 SMALL_BAR_MAX = 19.5     # "No. 19 and smaller"; DB20 is treated as a larger bar
+
+# Where each step lives in the knowledge base bundled with the skill
+KB = {
+    0: "kb/chapter-18.md §18.2, 18.3, 18.4",
+    1: "kb/chapter-10.md §10.3; kb/chapter-20.md Table 20.2.2.4(a)",
+    3: "kb/chapter-06.md §6.6.4.3",
+    4: "kb/chapter-06.md §6.2.5, 6.6.4.4–6.6.4.5",
+    5: "kb/chapter-22.md §22.4; kb/chapter-21.md Table 21.2.2",
+    6: "kb/chapter-22.md §22.5; kb/chapter-10.md §10.6.2, 10.7.6.5; kb/chapter-18.md §18.3.3, 18.4.3.1",
+    7: "kb/chapter-10.md §10.6.1, 10.7; kb/chapter-25.md §25.2, 25.7.2; kb/chapter-18.md §18.4.3",
+    8: "kb/chapter-10.md §10.7.5; kb/chapter-25.md §25.4.2, 25.5",
+    9: "kb/chapter-15.md §15.3, 15.5; kb/chapter-16.md §16.3.4",
+}
 
 
 def bar_area(db):
@@ -355,18 +373,6 @@ def biaxial_shear(rx, ry):
     return {"required": True, "sum": ux + uy, "ok": ux + uy <= 1.5}
 
 
-def omf_shear(sec, axis, Pu, lu, Vu_omega=None):
-    """18.3.3: columns of OMF in SDC B with lu <= 5 c1."""
-    c1 = sec.h if axis == "x" else sec.b
-    if lu > 5 * c1:
-        return {"applies": False}
-    Mn = Mn_at_Pn(sec, axis, Pu)
-    Va = 2 * Mn / lu
-    Ve = min(Va, Vu_omega) if Vu_omega is not None else Va
-    return {"applies": True, "Mn": Mn, "V_from_Mn": Va, "Ve": Ve,
-            "used_omega": Vu_omega is not None}
-
-
 # ---------------------------------------------------------------------------
 # Detailing and splices
 # ---------------------------------------------------------------------------
@@ -448,8 +454,8 @@ def to_si(inp):
     s = json.loads(json.dumps(inp))
     if u == "kgf-m":
         s["b"], s["h"] = inp["b"] * 1000, inp["h"] * 1000
-        for k in ("fc", "fy", "fyt"):
-            if k in inp:
+        for k in ("fc", "fy", "fyt", "fc_floor"):
+            if inp.get(k) is not None:
                 s[k] = inp[k] * KSC_TO_MPA
         for k in ("lu", "L", "lux", "luy"):
             if inp.get(k) is not None:
@@ -478,6 +484,80 @@ def to_si(inp):
     return s
 
 
+# ---------------------------------------------------------------------------
+# Step 0 / 6 / 7 — seismic system provisions (Ch.18)
+# ---------------------------------------------------------------------------
+
+def mn_max_over_combos(sec, axis, Pus):
+    """Largest nominal moment (no φ) for the axial forces of the design combos
+    (18.3.3 / 18.4.3.1(a): Pu chosen to develop the largest moment strength)."""
+    best = 0.0
+    for Pu in Pus:
+        try:
+            best = max(best, Mn_at_Pn(sec, axis, Pu))
+        except Exception:
+            continue
+    return best
+
+
+def seismic_shear(sec, axis, Pus, lu, system, Vu_omega=None):
+    """OMF §18.3.3 (only when lu ≤ 5c1) and IMF §18.4.3.1: φVn ≥ lesser of
+    (a) shear from Mn at both ends, (b) shear from combos with Ω0·E."""
+    c1 = sec.h if axis == "x" else sec.b
+    if system == "OMF" and lu > 5 * c1:
+        return {"applies": False, "why": f"ℓu = {lu:.0f} > 5c1 = {5*c1:.0f} mm"}
+    Mn = mn_max_over_combos(sec, axis, Pus)
+    Va = 2 * Mn / lu
+    Ve = min(Va, Vu_omega) if Vu_omega else Va
+    return {"applies": True, "Mn": Mn, "V_from_Mn": Va, "Ve": Ve,
+            "used_omega": bool(Vu_omega), "clause": "18.3.3" if system == "OMF" else "18.4.3.1"}
+
+
+def imf_detailing(sec, lu, so, fy):
+    """18.4.3.3–18.4.3.4 (SI values converted from 8 in., 6 in., 18 in.)."""
+    if fy <= 420 + 1e-6:
+        so_bar = min(8 * sec.db, 200.0)
+        lbl = "Grade 420: min(8db, 200 mm)"
+    else:
+        so_bar = min(6 * sec.db, 150.0)
+        lbl = "Grade 550: min(6db, 150 mm)"
+    so_max = min(so_bar, 0.5 * min(sec.b, sec.h))
+    lo = max(lu / 6.0, max(sec.b, sec.h), 450.0)
+    return {"so": so, "so_max": so_max, "so_rule": lbl, "so_ok": so <= so_max + 1e-9,
+            "lo": lo, "first_hoop": so_max / 2.0}
+
+
+# ---------------------------------------------------------------------------
+# Step 9 — joints, floor concrete, footing
+# ---------------------------------------------------------------------------
+
+def floor_concrete(fc_col, fc_floor, beams_4_sides=False):
+    """§15.5.1: if f′c,floor < 0.7 f′c,col use (a) column concrete through floor
+    extending 600 mm, (b) dowels/confinement at floor f′c, or (c) equivalent
+    strength 0.75 f′c,col + 0.35 f′c,floor (joints confined by beams on 4 sides,
+    f′c,col ≤ 2.5 f′c,floor)."""
+    if fc_floor is None:
+        return None
+    need = fc_floor < 0.7 * fc_col
+    out = {"fc_floor": fc_floor, "ratio": fc_floor / fc_col, "required": need}
+    if need:
+        eq = 0.75 * min(fc_col, 2.5 * fc_floor) + 0.35 * fc_floor
+        out["fc_equiv_c"] = eq if beams_4_sides else None
+    return out
+
+
+def footing_dowels(sec):
+    """§16.3.4.1: cast-in-place column to footing — As across interface ≥ 0.005Ag."""
+    req = 0.005 * sec.Ag
+    n = math.ceil(req / sec.Ab)
+    return {"As_req": req, "n_bars": max(n, 4), "As_cont": sec.Ast,
+            "ok_if_all_bars_dowelled": sec.Ast >= req}
+
+
+# ---------------------------------------------------------------------------
+# Top level
+# ---------------------------------------------------------------------------
+
 def design_column(inp):
     si = to_si(inp)
     sec = Section(si["b"], si["h"], si["fc"], si["fy"], si["bar_db"],
@@ -486,31 +566,42 @@ def design_column(inp):
                   si.get("grade420_exception", False))
     fyt = si.get("fyt", si["fy"])
     s_tie = si.get("tie_s", 150.0)
+    so = si.get("tie_s_end", s_tie)
     legs_x = si.get("tie_legs_x", 2)
     legs_y = si.get("tie_legs_y", 2)
     lux = si.get("lux", si.get("lu"))
     luy = si.get("luy", si.get("lu"))
     L = si.get("L")
     k = si.get("k", 1.0)
-    res = {"input": inp, "sec": sec, "fyt": fyt, "messages": []}
+    system = si.get("system")
+    res = {"input": inp, "sec": sec, "fyt": fyt, "messages": [], "system": system}
 
-    # scope
+    # Step 0 — seismic system
+    if system == "SMF":
+        res["messages"].append(("FAIL", "18.7", "เสา SMF ต้องใช้ §18.7 ครบ (ΣMnc ≥ 1.2ΣMnb, Ash, ℓo, Ve จาก Mpr) — นอกขอบเขตสกิล"))
+        res["stopped"] = True
+        return res
+    if system not in (None, "OMF", "IMF"):
+        res["messages"].append(("FAIL", "18.2", f"ไม่รู้จักระบบ '{system}' — ใช้ OMF, IMF หรือไม่ระบุ (SDC A)"))
+        res["stopped"] = True
+        return res
     if k > 1.0:
         res["messages"].append(("WARN", "6.6.4.4.3", "non-sway ควรใช้ k ≤ 1.0"))
+
+    # Step 3 — sway / non-sway
     st = si.get("story")
     if st:
         Q = stability_index(st["sumPu"], st["delta_o"], st["Vus"], st["lc"])
         res["Q"] = Q
         if Q > 0.05:
-            res["messages"].append(("FAIL", "6.6.4.3", f"Q = {Q:.4f} > 0.05 → sway ไม่รองรับ"))
+            res["messages"].append(("FAIL", "6.6.4.3", f"Q = {Q:.4f} > 0.05 → โครง sway ต้องใช้ §6.6.4.6 หรือวิเคราะห์ P-Δ (นอกขอบเขตสกิล)"))
             res["stopped"] = True
             return res
-    if si.get("system") in ("SMF", "IMF"):
-        res["messages"].append(("FAIL", "18", "เสาใน IMF/SMF → ต้องใช้ข้อกำหนด Ch.18 (นอกขอบเขตสกิล)"))
-        res["stopped"] = True
-        return res
 
+    # Step 5 — axial limit
     res["phiPn_max"] = phiPn_max(sec)
+
+    # Steps 4–6 per combination
     rows = []
     for i, cb in enumerate(si["combos"]):
         name = cb.get("name", f"LC{i+1}")
@@ -545,7 +636,6 @@ def design_column(inp):
             chk.append(c)
         row["checks"] = chk
         row["ratio"] = max(c["ratio"] for c in chk)
-        # shear
         if cb.get("Vux") is not None or cb.get("Vuy") is not None:
             rx = shear_dir(sec, "x", abs(cb.get("Vux", 0)), Pu, s_tie, legs_x, fyt)
             ry = shear_dir(sec, "y", abs(cb.get("Vuy", 0)), Pu, s_tie, legs_y, fyt)
@@ -553,22 +643,41 @@ def design_column(inp):
         rows.append(row)
     res["rows"] = rows
 
-    if si.get("system") == "OMF" and (lux or luy):
-        Pmax = max(cb["Pu"] for cb in si["combos"])
-        om = {}
+    # Step 6 — seismic shear (OMF short column / IMF)
+    if system in ("OMF", "IMF") and (lux or luy):
+        Pus = [cb["Pu"] for cb in si["combos"]]
+        Pmin = min(Pus)
+        ss = {}
         for ax_, lu_ in (("x", lux), ("y", luy)):
-            if lu_:
-                vo = max((cb.get(f"Vu_omega_{'y' if ax_ == 'x' else 'x'}") or 0 for cb in si["combos"]), default=0) or None
-                om[ax_] = omf_shear(sec, ax_, Pmax, lu_, vo)
-                if om[ax_].get("applies"):
-                    dir_ = "y" if ax_ == "x" else "x"
-                    legs = legs_y if dir_ == "y" else legs_x
-                    om[ax_]["check"] = shear_dir(sec, dir_, om[ax_]["Ve"], min(cb["Pu"] for cb in si["combos"]), s_tie, legs, fyt)
-        res["omf"] = om
+            if not lu_:
+                continue
+            key = f"Vu_omega_{'y' if ax_ == 'x' else 'x'}"
+            vo = max((cb.get(key) or 0 for cb in si["combos"]), default=0) or None
+            r = seismic_shear(sec, ax_, Pus, lu_, system, vo)
+            if r.get("applies"):
+                dir_ = "y" if ax_ == "x" else "x"
+                legs = legs_y if dir_ == "y" else legs_x
+                s_use = so if system == "IMF" else s_tie
+                r["check"] = shear_dir(sec, dir_, r["Ve"], Pmin, s_use, legs, fyt)
+                r["s_used"] = s_use
+            ss[ax_] = r
+        res["seismic_shear"] = ss
 
+    # Step 7 — detailing (+ IMF end zones)
     res["detail"] = detailing(sec, s_tie, si.get("dagg", 20.0),
                               si.get("crossties_x", 0), si.get("crossties_y", 0))
+    if system == "IMF":
+        lu_min = min(v for v in (lux, luy) if v) if (lux or luy) else None
+        if lu_min:
+            res["imf"] = imf_detailing(sec, lu_min, so, sec.fy_in)
+
+    # Step 8 — splices
     res["splice"] = splices(sec, s_tie, legs_x, legs_y)
+
+    # Step 9 — joint, floor concrete, footing
+    res["floor"] = floor_concrete(sec.fc, si.get("fc_floor"), si.get("beams_4_sides", False))
+    if si.get("base_on_footing"):
+        res["dowels"] = footing_dowels(sec)
     return res
 
 
@@ -580,10 +689,15 @@ def _st(ok):
     return "✅ ผ่าน" if ok else "❌ ไม่ผ่าน"
 
 
+def _kb(step):
+    return f"_อ้างอิง: {KB[step]}_"
+
+
 def report(res):
     inp = res["input"]
     kg = inp.get("units", "kgf-m") == "kgf-m"
     sec = res["sec"]
+    system = res.get("system")
 
     def P(n):
         return f"{n/1e3:,.1f} kN" + (f" ({n/G/1000:,.2f} t)" if kg else "")
@@ -591,30 +705,40 @@ def report(res):
     def M(n):
         return f"{n/1e6:,.1f} kN·m" + (f" ({n/G/1000:,.0f} kgf·m)" if kg else "")
 
-    L = ["# ผลออกแบบ/ตรวจสอบเสา RC — ACI 318M-19 (tied, non-sway)\n"]
-    L.append(f"หน้าตัด {sec.b:.0f}×{sec.h:.0f} mm · f′c = {sec.fc:.2f} MPa · fy = {sec.fy_in:.1f} MPa"
-             + (f" (ใช้ {sec.fy:.0f})" if sec.fy < sec.fy_in else "")
-             + f" · เหล็กยืน {len(sec.bars)}-DB{sec.db:.0f} (ด้าน b {sec.nx} เส้น, ด้าน h {sec.ny} เส้น) · "
-             f"Ast = {sec.Ast/100:.2f} cm² · ปลอก DB{sec.ds:.0f} @ {inp.get('tie_s', 150)} mm · "
-             f"ระยะผิวถึงศูนย์เหล็ก {sec.edge:.1f} mm\n")
+    L = ["# ผลออกแบบ/ตรวจสอบเสา RC — ACI 318M-19 (ตาม KB โครงการ)\n"]
+    L.append("## 0. ระบบต้านแผ่นดินไหว")
+    L.append(f"- ระบบ: **{system or 'ไม่ระบุ (SDC A / ไม่อยู่ในระบบต้านแผ่นดินไหว)'}**")
+    L.append(_kb(0) + "\n")
+    L.append("## 1. หน้าตัดและวัสดุ")
+    L.append(f"- {sec.b:.0f}×{sec.h:.0f} mm · f′c = {sec.fc:.2f} MPa · fy = {sec.fy_in:.1f} MPa"
+             + (f" (ใช้ {sec.fy:.0f} ตาม fy ≤ 550)" if sec.fy < sec.fy_in else "")
+             + f" · fyt (เฉือน) = {min(res['fyt'], FYT_SHEAR_MAX):.1f} MPa")
+    L.append(f"- เหล็กยืน {len(sec.bars)}-DB{sec.db:.0f} (ด้าน b {sec.nx} เส้น, ด้าน h {sec.ny} เส้น), "
+             f"Ast = {sec.Ast:,.0f} mm² · ปลอก DB{sec.ds:.0f} @ {inp.get('tie_s', 150)} mm"
+             + (f" (ปลายเสา @ {inp.get('tie_s_end')} mm)" if inp.get("tie_s_end") else "")
+             + f" · ระยะผิวถึงศูนย์เหล็ก {sec.edge:.1f} mm")
+    L.append(_kb(1) + "\n")
     for lvl, cl, msg in res["messages"]:
         L.append(f"- {'❌' if lvl == 'FAIL' else '⚠️'} §{cl}: {msg}")
+    L.append("## 3. Sway หรือ non-sway")
     if "Q" in res:
-        L.append(f"- Q = ΣPuΔo/(Vus·lc) = {res['Q']:.4f} {'≤' if res['Q'] <= 0.05 else '>'} 0.05 (§6.6.4.3)")
+        L.append(f"- Q = ΣPuΔo/(Vus·lc) = {res['Q']:.4f} {'≤' if res['Q'] <= 0.05 else '>'} 0.05 → "
+                 + ("non-sway" if res['Q'] <= 0.05 else "sway"))
+    else:
+        L.append("- **ยังไม่ตรวจ** — ไม่มีข้อมูลชั้น สมมติ non-sway")
+    L.append(_kb(3) + "\n")
     if res.get("stopped"):
-        L.append("\n**หยุดการคำนวณ — อยู่นอกขอบเขต**")
+        L.append("**หยุดการคำนวณ — อยู่นอกขอบเขต**")
         return "\n".join(L)
-    L.append(f"\n## 1. แรงอัดสูงสุด (§22.4.2)\n- Po = 0.85f′c(Ag − Ast) + fyAst = {P(sec.Po)}; "
-             f"**φPn,max = 0.65 × 0.80Po = {P(res['phiPn_max'])}**\n")
 
-    L.append("## 2. ความชะลูด (§6.2.5, §6.6.4.5)")
+    L.append("## 4. ความชะลูด")
     for row in res["rows"]:
         for key in ("slender_x", "slender_y"):
             s = row[key]
             if not s:
                 continue
             ax = "x (ความลึก h)" if s["axis"] == "x" else "y (ความลึก b)"
-            line = (f"- {row['name']} แกน {ax}: klu/r = {s['klu_r']:.2f}, M1/M2 = {s['M1_M2']:+.3f} ({s['how']}), "
+            line = (f"- {row['name']} แกน {ax}: kℓu/r = {s['klu_r']:.2f}, M1/M2 = {s['M1_M2']:+.3f} ({s['how']}), "
                     f"เกณฑ์ = {s['limit']:.1f} → ")
             if not s["slender"]:
                 line += "ไม่ชะลูด"
@@ -625,25 +749,28 @@ def report(res):
                          f"M2,min = {M(s['M2min'])}, **Mc = {M(s['Mc'])}**"
                          + ("" if s["second_order_ok"] else " · ❌ Mc > 1.4M (§6.2.5.3) ต้องแก้ระบบ"))
             L.append(line)
-    L.append("")
+    L.append(_kb(4) + "\n")
 
-    L.append("## 3. แรงอัดร่วมดัดสองแกน (3D interaction, §22.4)")
-    L.append("| Combo | จุด | Pu | Mux | Muy | มุมโหลด | Mres | φMcap | φ | ratio |\n|---|---|---|---|---|---|---|---|---|---|")
-    worst = (0, None)
+    L.append("## 5. แรงอัดร่วมดัดสองแกน")
+    L.append(f"- Po = {P(sec.Po)}; **φPn,max = 0.65 × 0.80Po = {P(res['phiPn_max'])}** (Table 22.4.2.1)")
+    L.append("\n| Combo | จุด | Pu (kN) | Mux | Muy | มุมโหลด | Mres | φMcap | φ | ratio |\n|---|---|---|---|---|---|---|---|---|---|")
+    worst = (0.0, None)
     for row in res["rows"]:
         for c in row["checks"]:
-            if not c.get("ok", True) and c.get("reason"):
-                L.append(f"| {row['name']} | {c['at']} | {P(row['Pu'])} | | | | | | | ❌ {c['reason']} |")
+            if c.get("reason"):
+                L.append(f"| {row['name']} | {c['at']} | {row['Pu']/1e3:,.1f} | | | | | | | ❌ {c['reason']} |")
                 worst = (float("inf"), row["name"])
                 continue
+            r = c["ratio"]
             L.append(f"| {row['name']} | {c['at']} | {row['Pu']/1e3:,.1f} | {abs(c['Mux'])/1e6:,.1f} | {abs(c['Muy'])/1e6:,.1f} | "
                      f"{c['load_deg']:.1f}° | {c['Mres']/1e6:,.1f} | {c['phiMcap']/1e6:,.1f} | {c['phi']:.3f} | "
-                     f"{'**' if c['ratio'] > 1 else ''}{c['ratio']:.3f}{'**' if c['ratio'] > 1 else ''} |")
-            if c["ratio"] > worst[0]:
-                worst = (c["ratio"], row["name"])
-    L.append("\n(หน่วยตาราง: kN, kN·m · ratio = Mres/φMcap ที่ Pu เดียวกัน, หามุมแกนสะเทินให้ทิศโมเมนต์ความจุตรงทิศโหลด)\n")
+                     + (f"**{r:.3f}**" if r > 1 else f"{r:.3f}") + " |")
+            if r > worst[0]:
+                worst = (r, row["name"])
+    L.append("\n(kN·m · ratio = Mres/φMcap ที่ Pu เดียวกัน — 3D interaction, หามุมแกนสะเทินให้ทิศโมเมนต์ความจุตรงทิศโหลด)")
+    L.append(_kb(5) + "\n")
 
-    L.append("## 4. แรงเฉือน (Table 22.5.5.1, §10.6.2, §10.7.6.5.2)")
+    L.append("## 6. แรงเฉือน")
     sh_ok = True
     for row in res["rows"]:
         sh = row.get("shear")
@@ -653,65 +780,95 @@ def report(res):
             r = sh[k_]
             sh_ok &= r["ok"]
             L.append(f"- {row['name']} ทิศ {k_}: Vu = {P(r['Vu'])}, d = {r['d']:.0f}, Vc {r['eq']} = {P(r['Vc'])}"
-                     + (" (ถูกจำกัดที่ Vc,max)" if r["capped"] else "")
-                     + f", Vs = {P(r['Vs'])} (fyt = {r['fyt_used']:.0f}), **φVn = {P(r['phiVn'])}**, "
-                     + (f"s,max = {r['smax']:.0f} mm" if r["need_min"] else "ไม่บังคับ s,max เฉือน") + f" → {_st(r['ok'])}"
-                     + (" · ต้องมี Av,min (Vu > 0.5φVc)" if r["need_min"] else ""))
+                     + (" (= Vc,max)" if r["capped"] else "")
+                     + f", Vs = {P(r['Vs'])}, **φVn = {P(r['phiVn'])}**, "
+                     + (f"s,max = {r['smax']:.0f} mm" if r["need_min"] else "ไม่บังคับปลอกขั้นต่ำ")
+                     + f" → {_st(r['ok'])}")
         bi = sh["biaxial"]
         if bi["required"]:
             sh_ok &= bi["ok"]
-            L.append(f"  - แรงเฉือนสองทิศ §22.5.1.11: ผลรวม = {bi['sum']:.3f} ≤ 1.5 → {_st(bi['ok'])}")
-    om = res.get("omf")
-    if om:
-        for ax_, o in om.items():
-            if o.get("applies"):
-                ck = o["check"]
-                sh_ok &= ck["ok"]
-                L.append(f"- §18.3.3 OMF แกน {ax_}: Mn (ไม่คูณ φ) = {M(o['Mn'])}, Ve = {P(o['Ve'])}"
-                         + ("" if o["used_omega"] else " (ไม่มีกรณี Ω0E → ใช้ (a))")
-                         + f" → φVn = {P(ck['phiVn'])} → {_st(ck['phiVn'] >= o['Ve'])}")
-            else:
-                L.append(f"- §18.3.3 แกน {ax_}: lu > 5c1 → ไม่เข้าเงื่อนไข")
-    L.append("")
+            L.append(f"  - สองทิศ §22.5.1.11: ผลรวม = {bi['sum']:.3f} ≤ 1.5 → {_st(bi['ok'])}")
+    for ax_, o in (res.get("seismic_shear") or {}).items():
+        if not o.get("applies"):
+            L.append(f"- §18.3.3 แกน {ax_}: ไม่เข้าเงื่อนไขเสาสั้น ({o['why']})")
+            continue
+        ck = o["check"]
+        ok = ck["phiVn"] >= o["Ve"] and ck["checks"]["section_22.5.1.2"]
+        sh_ok &= ok
+        L.append(f"- **§{o['clause']} ({system}) แกน {ax_}:** Mn สูงสุดในช่วง Pu ที่ออกแบบ (ไม่คูณ φ) = {M(o['Mn'])} → "
+                 f"2Mn/ℓu = {P(o['V_from_Mn'])}"
+                 + (f"; เทียบ Ω₀E แล้วใช้ค่าน้อยกว่า" if o["used_omega"] else " (ไม่มีกรณี Ω₀E → ใช้ค่านี้)")
+                 + f" → Ve = {P(o['Ve'])}; φVn (s = {o['s_used']:.0f} mm, Pu ต่ำสุด) = {P(ck['phiVn'])} → {_st(ok)}")
+    L.append(_kb(6) + "\n")
 
     d = res["detail"]
-    L.append("## 5. รายละเอียดเหล็ก")
+    L.append("## 7. รายละเอียดเหล็ก")
     L.append(f"- ρg = {d['rho_g']*100:.2f}% (1–8%, §10.6.1.1) → {_st(d['rho_ok'])}; จำนวน {d['n_bars']} ≥ 4 (§10.7.3.1) → {_st(d['n_ok'])}")
-    L.append(f"- ระยะว่างเหล็กยืน {min(d['clear_x'], d['clear_y']):.0f} mm ≥ {d['clear_min']:.0f} mm (§25.2.3) → {_st(d['clear_ok'])}")
+    L.append(f"- ระยะว่างเหล็กยืน {min(d['clear_x'], d['clear_y']):.0f} ≥ {d['clear_min']:.0f} mm (§25.2.3) → {_st(d['clear_ok'])}")
     L.append(f"- ขนาดปลอก ≥ DB{d['tie_min']:.0f} (§25.7.2.2) → {_st(d['tie_ok'])}; ระยะปลอก {d['s_tie']:.0f} ≤ min(16db, 48dt, ด้านแคบ) = {d['s_tie_max']:.0f} mm (§25.7.2.1) → {_st(d['s_tie_ok'])}")
-    L.append(f"- ยึดรั้งเหล็กยืน §25.7.2.3: ต้องมี crosstie แนว y ≥ {d['crossties_req_y']}, แนว x ≥ {d['crossties_req_x']} → {_st(d['crossties_ok'])}")
-    L.append("- ปลอกวงแรก/วงสุดท้าย ≤ s/2 จากผิวฐานราก/พื้น และใต้เหล็กล่างสุดของพื้น/คาน (§10.7.6.2) — ระบุในแบบ")
+    L.append(f"- crosstie §25.7.2.3: ต้องมีแนว y ≥ {d['crossties_req_y']}, แนว x ≥ {d['crossties_req_x']} → {_st(d['crossties_ok'])}")
+    L.append("- ปลอกวงแรก/วงสุดท้าย ≤ s/2 จากผิวฐานราก/พื้น และใต้เหล็กล่างสุดของพื้น (§10.7.6.2)")
+    imf_ok = True
+    if res.get("imf"):
+        im = res["imf"]
+        imf_ok = im["so_ok"]
+        L.append(f"- **IMF §18.4.3.3:** so = {im['so']:.0f} ≤ min({im['so_rule']}, ½ ด้านแคบ) = {im['so_max']:.0f} mm → {_st(im['so_ok'])}")
+        L.append(f"- **IMF ℓo** ≥ max(ℓu/6, ด้านโตสุด, 450 mm) = **{im['lo']:.0f} mm** จากผิวจุดต่อทั้งสองปลาย; ปลอกวงแรก ≤ so/2 = {im['first_hoop']:.0f} mm (§18.4.3.4); นอก ℓo ตาม §10.7.6.5.2")
+        L.append("  - ค่า 200 / 150 / 450 mm แปลงจาก 8 / 6 / 18 in. (Ch.18 ยังไม่ได้เทียบเล่ม 318M)")
     if d["Ktr_note"]:
         L.append("- ⚠️ fy ≥ 550 MPa → ช่วงฝังยึด/ทาบต้องมี Ktr ≥ 0.5db (§10.7.1.3)")
+    L.append(_kb(7) + "\n")
+
     sp = res["splice"]
-    L.append(f"\n## 6. ต่อทาบเหล็กยืน (§10.7.5, Ch.25)")
+    L.append("## 8. ต่อทาบเหล็กยืน")
     if sp["lap_comp"]:
-        L.append(f"- ทาบรับแรงอัด = {sp['lap_comp']:.0f} mm" + (f" → ลดด้วย 0.83 (ปลอก ≥ 0.0015hs) = **{sp['lap_comp_reduced']:.0f} mm**" if sp["factor_083"] else ""))
-    L.append(f"- ทาบรับแรงดึง Class B = **{sp['lap_B']:.0f} mm** (ℓd = {sp['ld']:.0f} mm, ψg = {sp['psi_g']}) — ใช้เมื่อหน่วยแรงดึง > 0.5fy หรือทาบ > 50% ที่ตำแหน่งเดียว (Table 10.7.5.2.2)")
-    L.append("- ถ้ามีชุดผสมที่ทำให้เหล็กรับแรงดึง (ลม/แผ่นดินไหว) ต้องใช้ทาบรับแรงดึง\n")
+        L.append(f"- ทาบรับแรงอัด (§25.5.5.1) = {sp['lap_comp']:.0f} mm"
+                 + (f" → ×0.83 (ขาปลอก ⊥ แต่ละด้าน ≥ 0.0015hs, §10.7.5.2.1) = **{sp['lap_comp_reduced']:.0f} mm**" if sp["factor_083"] else ""))
+    L.append(f"- ทาบรับแรงดึง Class B = **{sp['lap_B']:.0f} mm** (ℓd = {sp['ld']:.0f} mm, ψg = {sp['psi_g']}) — ใช้เมื่อหน่วยแรงดึง > 0.5fy หรือทาบ > 50% ที่หน้าตัดเดียว (Table 10.7.5.2.2)")
+    if system == "IMF":
+        L.append("- ตำแหน่งทาบ: แนะนำครึ่งกลางของความสูงเสา (นอก ℓo)")
+    L.append(_kb(8) + "\n")
+
+    L.append("## 9. จุดต่อ คอนกรีตพื้น และฐานราก")
+    fl = res.get("floor")
+    if fl:
+        if fl["required"]:
+            L.append(f"- ❗ **§15.5.1:** f′c พื้น = {fl['fc_floor']:.1f} < 0.7f′c เสา (อัตราส่วน {fl['ratio']:.2f}) → ต้องเลือก (a) เทคอนกรีตเสาทะลุพื้น ยื่นจากผิวเสา ≥ 600 mm "
+                     "(b) ใช้ f′c พื้นคำนวณเสา + dowel/เหล็กโอบรัด หรือ (c) "
+                     + (f"f′c เทียบเท่า = **{fl['fc_equiv_c']:.1f} MPa** (คานครบ 4 ด้าน) แล้วตรวจกำลังใหม่" if fl.get("fc_equiv_c") else "f′c เทียบเท่า (ใช้ได้เฉพาะจุดต่อที่มีคานลึกใกล้เคียงกันครบ 4 ด้าน)"))
+        else:
+            L.append(f"- §15.5.1: f′c พื้น/เสา = {fl['ratio']:.2f} ≥ 0.7 → ไม่ต้องทำเพิ่ม")
+    else:
+        L.append("- §15.5.1: **ยังไม่ตรวจ** — ไม่ได้ระบุ f′c พื้น (`fc_floor`)")
+    L.append("- รอยต่อคาน-เสา §15.3.1: ปลอกในรอยต่อ ≥ 2 ชั้นภายในความลึกคาน ระยะ ≤ 200 mm (ยกเว้นมีคานครบ 4 ด้านตาม §15.3.1.1)"
+             + ("; IMF ใช้ระยะ ≤ so ตาม §18.4.4" if system == "IMF" else "") + " — **ยังไม่ตรวจแรงเฉือนในรอยต่อ**")
+    dw = res.get("dowels")
+    if dw:
+        L.append(f"- §16.3.4.1 เหล็กข้ามผิวเสา-ฐานราก ≥ 0.005Ag = {dw['As_req']:,.0f} mm² → DB{sec.db:.0f} อย่างน้อย {dw['n_bars']} เส้น"
+                 + f" (เหล็กยืนทั้งหมด {sec.Ast:,.0f} mm² {'พอถ้าเสียบลงฐานรากทุกเส้น' if dw['ok_if_all_bars_dowelled'] else 'ไม่พอ'})")
+    L.append(_kb(9) + "\n")
 
     all_ok = (worst[0] <= 1.0 and sh_ok and d["rho_ok"] and d["n_ok"] and d["clear_ok"]
-              and d["tie_ok"] and d["s_tie_ok"] and d["crossties_ok"])
-    L.append("## 7. สรุปสถานะ")
-    L.append("| รายการ | สถานะ |\n|---|---|")
-    if "Q" in res:
-        L.append(f"| Sway | non-sway (Q = {res['Q']:.4f}) |")
-    else:
-        L.append("| Sway | **ยังไม่ตรวจ** — ไม่มีข้อมูลชั้น (สมมติ non-sway) |")
+              and d["tie_ok"] and d["s_tie_ok"] and d["crossties_ok"] and imf_ok
+              and not (fl and fl["required"]))
+    L.append("## 10. สรุปสถานะ")
+    L.append("| ขั้น | รายการ | สถานะ |\n|---|---|---|")
+    L.append(f"| 0 | ระบบ | {system or 'ไม่ระบุ'} |")
+    L.append(f"| 3 | Sway | {'non-sway (Q = %.4f)' % res['Q'] if 'Q' in res else '**ยังไม่ตรวจ**'} |")
     unstable = any(s and s.get("unstable") for r in res["rows"] for s in (r["slender_x"], r["slender_y"]))
-    L.append(f"| ความชะลูด | {'❌ ไม่เสถียร' if unstable else 'ตรวจแล้ว (ดู §2)'} |")
-    L.append(f"| φPn,max ≥ Pu | {_st(all(r['Pu'] <= res['phiPn_max'] for r in res['rows']))} |")
-    L.append(f"| 3D interaction (ratio สูงสุด {worst[0]:.3f} @ {worst[1]}) | {_st(worst[0] <= 1.0)} |")
-    L.append(f"| แรงเฉือน (x, y, สองทิศ{', 18.3.3' if om else ''}) | {_st(sh_ok)} |")
-    L.append(f"| เหล็กยืน + ปลอก + crosstie | {_st(d['rho_ok'] and d['n_ok'] and d['clear_ok'] and d['tie_ok'] and d['s_tie_ok'] and d['crossties_ok'])} |")
-    L.append("| ต่อทาบ | คำนวณแล้ว — ระบุในแบบ |")
-    L.append("| รอยต่อคาน-เสา (Ch.15), ฐานราก | **ยังไม่ตรวจ** |")
+    L.append(f"| 4 | ความชะลูด | {'❌ ไม่เสถียร' if unstable else 'ตรวจแล้ว'} |")
+    L.append(f"| 5 | φPn,max และ 3D interaction (ratio สูงสุด {worst[0]:.3f} @ {worst[1]}) | {_st(worst[0] <= 1.0 and all(r['Pu'] <= res['phiPn_max'] for r in res['rows']))} |")
+    L.append(f"| 6 | แรงเฉือน{' + ' + system if system else ''} | {_st(sh_ok)} |")
+    L.append(f"| 7 | รายละเอียดเหล็ก | {_st(d['rho_ok'] and d['n_ok'] and d['clear_ok'] and d['tie_ok'] and d['s_tie_ok'] and d['crossties_ok'] and imf_ok)} |")
+    L.append("| 8 | ต่อทาบ | คำนวณแล้ว — ระบุในแบบ |")
+    L.append(f"| 9 | §15.5 คอนกรีตพื้น | {('❗ ต้องดำเนินการ' if fl['required'] else '✅') if fl else '**ยังไม่ตรวจ**'} |")
+    L.append("| 9 | แรงเฉือนรอยต่อคาน-เสา (Ch.15) | **ยังไม่ตรวจ** |")
     L.append("")
-    L.append(f"**{'ผ่านทุกรายการที่ตรวจ' if all_ok else 'มีรายการไม่ผ่าน — ต้องแก้'}** (ไม่รวมรายการที่ยังไม่ตรวจ)\n")
+    L.append(f"**{'ผ่านทุกรายการที่ตรวจ' if all_ok else 'มีรายการไม่ผ่านหรือต้องดำเนินการ'}** (ไม่รวมรายการที่ยังไม่ตรวจ)\n")
+    sec_ety = sec.ety
     L.append("_สมมติฐาน: ACI 318M-19 · tied · non-sway · Es = 200,000 MPa · "
-             f"εty = {sec.ety:.5f} · r = {'√(Ig/Ag)' if inp.get('r_method', 'sqrt') == 'sqrt' else '0.3h'} · "
-             f"βdns = {inp.get('beta_dns', 0.6)} · (EI)eff สมการ ({inp.get('ei', 'a')}) · "
-             "M1 = M2 = 0 → M1/M2 = −1 · ค่าคงที่ SI เทียบเล่ม 318M-19 แล้ว · "
+             f"εty = {sec_ety:.5f} · βdns = {inp.get('beta_dns', 0.6)} · (EI)eff สมการ ({inp.get('ei', 'a')}) · "
+             "ค่าคงที่ SI ของ Ch.6, 10, 22, 25 เทียบเล่ม 318M-19 แล้ว · "
              "ผลนี้ใช้ประกอบรายการคำนวณ วิศวกรผู้รับผิดชอบต้องตรวจและลงนาม_")
     return "\n".join(L)
 

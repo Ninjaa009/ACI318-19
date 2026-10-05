@@ -2,18 +2,18 @@
   "units": "kgf-m",
   "b": 0.4,
   "h": 0.4,
-  "fc": 280,
+  "fc": 320,
   "fy": 4000,
   "fyt": 2400,
   "bar_db": 20,
   "nx": 3,
   "ny": 3,
   "cover": 40,
-  "tie_db": 9,
-  "tie_s": 200,
+  "tie_db": 10,
+  "tie_s": 150,
   "lu": 3.5,
   "L": 4.0,
-  "system": "OMF",
+  "system": "IMF",
   "dagg": 20,
   "story": {
     "sumPu": 1800000,
@@ -30,7 +30,8 @@
       "Vuy": 2675,
       "My_top": 2800,
       "My_bot": -1900,
-      "Vux": 1175
+      "Vux": 1175,
+      "Vu_omega_y": null
     },
     {
       "name": "0.75(1.4D+1.7L+1.7W)",
@@ -40,7 +41,14 @@
       "Vuy": 7570,
       "My_top": 3100,
       "My_bot": -2500,
-      "Vux": 1600
+      "Vux": 1600,
+      "Vu_omega_y": 15000
     }
-  ]
+  ],
+  "tie_s_end": 100,
+  "fc_floor": 210,
+  "beams_4_sides": true,
+  "base_on_footing": true,
+  "crossties_x": 0,
+  "crossties_y": 0
 }

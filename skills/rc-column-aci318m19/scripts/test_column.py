@@ -10,7 +10,7 @@ import os
 import sys
 
 sys.path.insert(0, os.path.dirname(os.path.abspath(__file__)))
-from column import (Section, point, capacity_at, phiPn_max, stability_index,
+from column import (seismic_shear, imf_detailing, floor_concrete, footing_dowels, mn_max_over_combos, Section, point, capacity_at, phiPn_max, stability_index,
                     curvature, slenderness, shear_dir, biaxial_shear, detailing,
                     splices, Mn_at_Pn, design_column, report, bar_area,
                     KSC_TO_MPA, G)
@@ -159,6 +159,37 @@ check_true("N6 SMF stops", design_column(dict(inp, system="SMF")).get("stopped")
 # ---------------------------------------------------------------- N7 §18.3.3 Mn without φ
 mn = Mn_at_Pn(S1, "x", 1000e3)
 check_true("N7 Mn(no φ) > φMn at same P", mn > capacity_at(S1, 1000e3, 1, 0)["phiMcap"])
+
+
+# ---------------------------------------------------------------- K4 step 0/6/7 — IMF (new in KB rebuild)
+im = imf_detailing(S1, 4500, 150, 420)
+check("K4 IMF so,max = min(8db, 200, b/2) (mm)", im["so_max"], min(8 * 20, 200, 200))
+check("K4 IMF ℓo = max(ℓu/6, max dim, 450) (mm)", im["lo"], max(4500 / 6, 400, 450))
+check_true("K4 IMF so 150 ok", im["so_ok"])
+check_true("K4 IMF so 200 fails", not imf_detailing(S1, 4500, 200, 420)["so_ok"])
+check("K4 IMF Grade 550 so,max = min(6db, 150)", imf_detailing(S1, 4500, 100, 550)["so_max"], min(6 * 20, 150, 200))
+pus = [400e3, 1000e3, 1600e3]
+mn_hand = max(Mn_at_Pn(S1, "x", p) for p in pus)
+check("K4 Mn max over design Pu", mn_max_over_combos(S1, "x", pus), mn_hand)
+ss = seismic_shear(S1, "x", pus, 3000, "IMF")
+check("K4 IMF Ve = 2Mn/ℓu (no Ω0 case)", ss["Ve"], 2 * mn_hand / 3000)
+check("K4 IMF Ve = lesser with Ω0E", seismic_shear(S1, "x", pus, 3000, "IMF", 50e3)["Ve"], min(2 * mn_hand / 3000, 50e3))
+check_true("K4 OMF ℓu > 5c1 → 18.3.3 n/a", seismic_shear(S1, "x", pus, 2500, "OMF")["applies"] is False)
+check_true("K4 IMF applies for any ℓu", seismic_shear(S1, "x", pus, 2500, "IMF")["applies"])
+
+# ---------------------------------------------------------------- K5 step 9 — joints, floor, footing (new)
+fl = floor_concrete(28, 18, beams_4_sides=True)
+check_true("K5 §15.5 f′c floor 18 < 0.7×28 → required", fl["required"])
+check("K5 §15.5(c) equivalent f′c", fl["fc_equiv_c"], 0.75 * 28 + 0.35 * 18)
+check_true("K5 §15.5 floor 21 ≥ 19.6 → not required", not floor_concrete(28, 21)["required"])
+check("K5 §15.5(c) cap f′c,col ≤ 2.5 f′c,floor", floor_concrete(40, 10, True)["fc_equiv_c"], 0.75 * 25 + 0.35 * 10)
+dw = footing_dowels(S1)
+check("K5 §16.3.4.1 dowels 0.005Ag (mm²)", dw["As_req"], 0.005 * 400 * 400)
+check("K5 dowel count DB20", dw["n_bars"], max(math.ceil(800 / bar_area(20)), 4), 0)
+imf_res = design_column(dict(inp, system="IMF", tie_s_end=150, fc_floor=18 / KSC_TO_MPA, base_on_footing=True))
+check_true("K5 IMF end-to-end runs, report renders", "IMF" in report(imf_res) and imf_res.get("imf") is not None)
+check("K5 kgf-m fc_floor converted (ratio)", imf_res["floor"]["ratio"], 18 / 28)
+check_true("K5 §15.5 flagged in report", "§15.5.1" in report(imf_res) and imf_res["floor"]["required"])
 
 # ---------------------------------------------------------------- output
 fails = [x for x in RESULTS if not x[3]]

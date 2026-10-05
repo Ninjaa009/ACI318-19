@@ -2,6 +2,8 @@
 
 รันด้วย `python3 scripts/test_column.py` — วันที่ 2026-10-05
 
+C8 = ตัวอย่างมือเสาชะลูด S1 · K = สูตรปิดอิสระ (K4 IMF/แผ่นดินไหว, K5 รอยต่อ/พื้น/ฐานราก) · N = เคสตรวจจุดเฉพาะ
+
 | # | การทดสอบ | ได้ | คาดหมาย | ผล |
 |---|---|---|---|---|
 | 1 | C8 Ast (mm²) | 2,513 | 2,513 | ✅ |
@@ -60,5 +62,24 @@
 | 54 | N6 Q > 0.05 stops | True | True | ✅ |
 | 55 | N6 SMF stops | True | True | ✅ |
 | 56 | N7 Mn(no φ) > φMn at same P | True | True | ✅ |
+| 57 | K4 IMF so,max = min(8db, 200, b/2) (mm) | 160 | 160 | ✅ |
+| 58 | K4 IMF ℓo = max(ℓu/6, max dim, 450) (mm) | 750 | 750 | ✅ |
+| 59 | K4 IMF so 150 ok | True | True | ✅ |
+| 60 | K4 IMF so 200 fails | True | True | ✅ |
+| 61 | K4 IMF Grade 550 so,max = min(6db, 150) | 120 | 120 | ✅ |
+| 62 | K4 Mn max over design Pu | 2.937e+08 | 2.937e+08 | ✅ |
+| 63 | K4 IMF Ve = 2Mn/ℓu (no Ω0 case) | 1.958e+05 | 1.958e+05 | ✅ |
+| 64 | K4 IMF Ve = lesser with Ω0E | 5e+04 | 5e+04 | ✅ |
+| 65 | K4 OMF ℓu > 5c1 → 18.3.3 n/a | True | True | ✅ |
+| 66 | K4 IMF applies for any ℓu | True | True | ✅ |
+| 67 | K5 §15.5 f′c floor 18 < 0.7×28 → required | True | True | ✅ |
+| 68 | K5 §15.5(c) equivalent f′c | 27.3 | 27.3 | ✅ |
+| 69 | K5 §15.5 floor 21 ≥ 19.6 → not required | True | True | ✅ |
+| 70 | K5 §15.5(c) cap f′c,col ≤ 2.5 f′c,floor | 22.25 | 22.25 | ✅ |
+| 71 | K5 §16.3.4.1 dowels 0.005Ag (mm²) | 800 | 800 | ✅ |
+| 72 | K5 dowel count DB20 | 4 | 4 | ✅ |
+| 73 | K5 IMF end-to-end runs, report renders | True | True | ✅ |
+| 74 | K5 kgf-m fc_floor converted (ratio) | 0.6429 | 0.6429 | ✅ |
+| 75 | K5 §15.5 flagged in report | True | True | ✅ |
 
-56/56 passed
+75/75 passed
