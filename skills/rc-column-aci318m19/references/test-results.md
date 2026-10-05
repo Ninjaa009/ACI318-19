@@ -51,13 +51,15 @@ C8 = ตัวอย่างมือเสาชะลูด S1 (400×400, 8-D
 | 43 | N4 0.83 factor applies (Ast_tie ≥ 0.0015hs) | True | True | ✅ |
 | 44 | N4 ℓd DB20 (ψg 1.0, 2.1) | 755.9 | 755.9 | ✅ |
 | 45 | N4 Class B = 1.3ℓd | 982.7 | 982.7 | ✅ |
-| 46 | N4 SD50 compression lap (0.13fy−24)db | 993.5 | 993.5 | ✅ |
-| 47 | N4 SD50 ψg 1.15 | 1.15 | 1.15 | ✅ |
-| 48 | N5 kgf-m Q | 0.01707 | 0.01707 | ✅ |
-| 49 | N5 kgf-m ratio midheight | 0.7501 | 0.75 | ✅ |
-| 50 | N5 report renders | True | True | ✅ |
-| 51 | N6 Q > 0.05 stops | True | True | ✅ |
-| 52 | N6 SMF stops | True | True | ✅ |
-| 53 | N7 Mn(no φ) > φMn at same P | True | True | ✅ |
+| 46 | N4 0.83: legs_x=2, legs_y=3 → applies | True | True | ✅ |
+| 47 | N4 0.83: legs_x=3, legs_y=2 → not (legs ⊥ b short) | True | True | ✅ |
+| 48 | N4 SD50 compression lap (0.13fy−24)db | 993.5 | 993.5 | ✅ |
+| 49 | N4 SD50 ψg 1.15 | 1.15 | 1.15 | ✅ |
+| 50 | N5 kgf-m Q | 0.01707 | 0.01707 | ✅ |
+| 51 | N5 kgf-m ratio midheight | 0.7501 | 0.75 | ✅ |
+| 52 | N5 report renders | True | True | ✅ |
+| 53 | N6 Q > 0.05 stops | True | True | ✅ |
+| 54 | N6 SMF stops | True | True | ✅ |
+| 55 | N7 Mn(no φ) > φMn at same P | True | True | ✅ |
 
-53/53 passed
+55/55 passed

@@ -67,7 +67,7 @@ description: ออกแบบและตรวจสอบเสา คสล
 ## ไฟล์
 
 - `scripts/column.py` — solver + รายงาน
-- `scripts/test_column.py` — 53 เคสทดสอบ (ตัวอย่างมือ S1 + สูตรปิดอิสระ) รัน `python3 scripts/test_column.py` ก่อนใช้ครั้งแรกในเซสชัน ต้องผ่านทั้งหมด
+- `scripts/test_column.py` — 55 เคสทดสอบ (ตัวอย่างมือ S1 + สูตรปิดอิสระ) รัน `python3 scripts/test_column.py` ก่อนใช้ครั้งแรกในเซสชัน ต้องผ่านทั้งหมด
 - `references/aci318m19-column-si.md` — สูตรและตาราง SI พร้อมเลขข้อ
 - `references/test-results.md` — ผลทดสอบล่าสุด
 - `examples/` — อินพุต SI และ kgf-m พร้อมรายงาน

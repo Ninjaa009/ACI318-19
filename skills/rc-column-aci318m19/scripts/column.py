@@ -426,10 +426,12 @@ def splices(sec, s_tie, legs_x, legs_y):
         lc = max(lc, 300.0)
         if fc < 21:
             lc *= 4.0 / 3.0
-    # 10.7.5.2.1(a): factor 0.83 if tie legs area >= 0.0015 h s in both directions
+    # 10.7.5.2.1(a): factor 0.83 if tie legs area >= 0.0015 h s in both directions;
+    # for each dimension count the legs perpendicular to it (legs_x run along x,
+    # i.e. perpendicular to h; legs_y run along y, perpendicular to b)
     At = bar_area(sec.ds)
-    ok_x = legs_y * At >= 0.0015 * sec.h * s_tie
-    ok_y = legs_x * At >= 0.0015 * sec.b * s_tie
+    ok_x = legs_x * At >= 0.0015 * sec.h * s_tie
+    ok_y = legs_y * At >= 0.0015 * sec.b * s_tie
     lc_red = max(0.83 * lc, 300.0) if (lc and ok_x and ok_y) else lc
     return {"ld": ld, "lap_A": lap_A, "lap_B": lap_B, "lap_comp": lc,
             "lap_comp_reduced": lc_red, "factor_083": bool(lc and ok_x and ok_y),
