@@ -1,85 +1,88 @@
-# ผลทดสอบ column.py
+# ผลทดสอบ colkit
 
-รันด้วย `python3 scripts/test_column.py` — วันที่ 2026-10-05
+รัน `python3 scripts/test_column.py` (Python 3.11, ไม่ใช้ไลบรารีภายนอก)
 
-C8 = ตัวอย่างมือเสาชะลูด S1 · K = สูตรปิดอิสระ (K4 IMF/แผ่นดินไหว, K5 รอยต่อ/พื้น/ฐานราก) · N = เคสตรวจจุดเฉพาะ
+```
+== S1 400×400 8-DB20, f′c 28, fy 420 (hand calc) ==
+PASS  Ast: got 2513.2741228718346 expected 2513.2741228718346
+PASS  φPn,max = 0.52Po: got 2497.954787890547 expected 2498.0
+PASS  β1(28): got 0.85 expected 0.85
+PASS  β1(35): got 0.7999999999999999 expected 0.8
+PASS  β1(56): got 0.65 expected 0.65
+PASS  Q: got 0.017066666666666667 expected 0.017067
+PASS  M1/M2 single (V·L = 30 ≈ |90−60|): got -0.6666666666666666 expected -0.6666666666666666
+PASS  M1/M2 double (V·L = 50 ≈ 30+20): got 0.6666666666666666 expected 0.6666666666666666
+PASS  M1 = M2 = 0 → −1: got -1.0 expected -1.0
+PASS  kℓu/r = 4500/(0.2887·400): got 38.97114317029974 expected 38.97
+PASS  limit 34+12(−2/3) = 26: got 26.0 expected 26.0
+PASS  Pc: got 6464.728930196217 expected 6464.7
+PASS  Cm = 0.6+0.4·2/3: got 0.8666666666666667 expected 0.86667
+PASS  δ: got 1.293524211202195 expected 1.2935
+PASS  Mc: got 116.41717900819755 expected 116.42
+PASS  y not slender (limit 40): got False expected False
+PASS  ratio top: got 0.6002882756147649 expected 0.6
+PASS  ratio mid: got 0.7501000572598583 expected 0.75
+PASS  uniaxial φMnx at 1600 kN ≈ 169.5: got 1.0001189703494586 expected 1.0
+PASS  c at that point ≈ 267.2: got 267.21333739647105 expected 267.2
+== fiber-model cross-check ==
+PASS  400×400 θ=0.0: fiber point lies on colkit surface: got 0.9963819784684164 expected 1.0
+PASS  400×600 θ=0.5: fiber point lies on colkit surface: got 0.9999805700108401 expected 1.0
+PASS  500×500 θ=0.785: fiber point lies on colkit surface: got 1.0025323237981858 expected 1.0
+PASS  300×600 θ=1.2: fiber point lies on colkit surface: got 0.9998528952778895 expected 1.0
+== symmetry / surface ==
+PASS  square: swap Mx/My same ratio: got 0.3712645166558804 expected 0.3712645166558805
+PASS  sign of moments ignored: got 0.3712645166558804 expected 0.3712645166558804
+PASS  scaled load on surface → 1.0: got 1.0 expected 1.0
+PASS  Pu > φPn,max → fail: got False expected False
+PASS  φ tension-controlled: got 0.9 expected 0.9
+PASS  φ transition: got 0.775 expected 0.775
+== shear ==
+PASS  Vc capped 0.42√28·400·340: got 302.2506297760188 expected 302.2506297760188
+PASS  φVn S1: got 293.98088697190747 expected 294.0
+PASS  λs(d=1000): got 0.6324555320336759 expected 0.6324555320336759
+PASS  fyt capped at 420 for shear: got 420.0 expected 420.0
+PASS  Av,min/s: got 0.3333333333333333 expected 0.3333333333333333
+PASS  s=600 → Av < Av,min → eq (c): got '(c)' expected '(c)'
+== seismic shear / IMF ==
+PASS  Ve uses largest Mn over Pu: got 383020274.4757906 expected 383020274.4757906
+PASS  Ve = 2Mn/ℓu: got 255346.8496505271 expected 255346.8496505271
+PASS  Ve limited by Ω0 shear: got 50000.0 expected 50000.0
+PASS  OMF ℓu > 5c1 → not applicable: got False expected False
+PASS  OMF ℓu ≤ 5c1 → applies: got True expected True
+PASS  so = min(8·16, 200, 200): got 128.0 expected 128.0
+PASS  ℓo = max(500, 500, 450): got 500.0 expected 500.0
+PASS  Grade 550: so = min(6·25,150,300): got 150.0 expected 150.0
+PASS  ℓo = ℓu/6 when governing: got 800.0 expected 800.0
+== detailing / splices ==
+PASS  DB20 uses 1.7 (bigger-bar row): got 1.7 expected 1.7
+PASS  ℓd DB20: got 933.7945803757378 expected 933.7945803757378
+PASS  ℓsc = 0.071·420·20: got 596.4 expected 596.4
+PASS  0.83 applies: 2·78.5 ≥ 0.0015·400·250: got True expected True
+PASS  DB16 uses 2.1: got 2.1 expected 2.1
+PASS  0.83 not applied (legs along x short for h=800): got False expected False
+PASS  0.83 applied with 4 legs along x: got True expected True
+PASS  Grade 550 ℓsc = (0.13fy−24)db: got 1187.5 expected 1187.5
+PASS  f′c < 21 → ×4/3: got 795.1999999999999 expected 795.1999999999999
+PASS  6 bars/face clear < 150 → 2 crossties each way: got True expected True
+PASS  tie s,max = min(16db,48dt,b): got 320.0 expected 320.0
+PASS  ρ < 1% fails: got False expected False
+PASS  §15.5 0.6 ratio → required: got True expected True
+PASS  §15.5 (c) 0.75·min(40,60)+0.35·24: got 38.4 expected 38.4
+PASS  dowels 0.005Ag: got 800.0 expected 800.0
+== engine ==
+PASS  S1 worst ratio: got 0.7500839692633338 expected 0.75
+PASS  S1 all pass: got True expected True
+PASS  kgf-m gives same ratio: got 0.7500839692633338 expected 0.7500839692633338
+PASS  kgf-m fc_floor converted: got 0.8571428571428571 expected 0.8571428571428571
+PASS  kgf-m Q: got 0.017066666666666667 expected 0.017066666666666667
+PASS  SMF stops: got True expected True
+PASS  Q > 0.05 stops: got True expected True
+PASS  design passes: got True expected True
+PASS  design: all lighter tried layouts fail: got True expected True
+PASS  design: chosen = last tried: got '8-DB16 (3×3)' expected '8-DB16 (3×3)'
+PASS  design: impossible → stop: got True expected True
+PASS  IMF design passes: got True expected True
+PASS  IMF s_end ≤ so,max: got True expected True
 
-| # | การทดสอบ | ได้ | คาดหมาย | ผล |
-|---|---|---|---|---|
-| 1 | C8 Ast (mm²) | 2,513 | 2,513 | ✅ |
-| 2 | C8 Q | 0.01707 | 0.01707 | ✅ |
-| 3 | C8 φPn,max (kN) | 2,498 | 2,498 | ✅ |
-| 4 | C8 M1/M2 x (single, from V·L) | -0.6667 | -0.6667 | ✅ |
-| 5 | C8 M1/M2 y (double, from V·L) | 0.6667 | 0.6667 | ✅ |
-| 6 | C8 klu/r | 38.97 | 38.97 | ✅ |
-| 7 | C8 x slender, y not | True | True | ✅ |
-| 8 | C8 Pc (kN) | 6,465 | 6,465 | ✅ |
-| 9 | C8 δ | 1.294 | 1.294 | ✅ |
-| 10 | C8 Mcx (kN·m) | 116.4 | 116.4 | ✅ |
-| 11 | C8 φMnx uniaxial at Pu (kN·m) | 169.5 | 169.5 | ✅ |
-| 12 | C8 c at Pu (mm) | 267.2 | 267.2 | ✅ |
-| 13 | C8 ratio top end | 0.6003 | 0.6 | ✅ |
-| 14 | C8 ratio midheight | 0.7501 | 0.75 | ✅ |
-| 15 | C8 ratio x only | 0.6869 | 0.687 | ✅ |
-| 16 | C8 Vc limited to Vc,max (kN) | 302.3 | 302.3 | ✅ |
-| 17 | C8 Vc capped flag | True | True | ✅ |
-| 18 | C8 φVn (kN) | 294 | 294 | ✅ |
-| 19 | C8 detailing all pass | True | True | ✅ |
-| 20 | K1 hand φPn = Pu (kN) | 1,600 | 1,600 | ✅ |
-| 21 | K1 hand φMn (kN·m) | 169.5 | 169.5 | ✅ |
-| 22 | K2 Pn at c→∞ = Po (kN) | 4,804 | 4,804 | ✅ |
-| 23 | K2 symmetric φMcap(α) = φMcap(90°−α) | 1.64e+08 | 1.64e+08 | ✅ |
-| 24 | K2 capacity direction = load direction (°) | 26.57 | 26.57 | ✅ |
-| 25 | K2 point on surface ratio = 1 | 1 | 1 | ✅ |
-| 26 | K2 Pu > φPn,max flagged | True | True | ✅ |
-| 27 | K3 M1=M2=0 → limit 22 | 22 | 22 | ✅ |
-| 28 | K3 double curvature limit capped 40 | 40 | 40 | ✅ |
-| 29 | K3 M2,min = Pu(15+0.03h) (kN·m) | 43.2 | 43.2 | ✅ |
-| 30 | K3 Cm = 1.0 when M2,min governs | 1 | 1 | ✅ |
-| 31 | K3 Pu ≥ 0.75Pc → unstable | True | True | ✅ |
-| 32 | N1 fyt used = 420 | 420 | 420 | ✅ |
-| 33 | N1 Vs uses 420 | 1.495e+05 | 1.495e+05 | ✅ |
-| 34 | N2 Nu tension term (MPa) | -0.3125 | -0.3125 | ✅ |
-| 35 | N2 need Av,min and s > d/2 fails | True | True | ✅ |
-| 36 | N2 biaxial sum 1.55 > 1.5 fails | True | True | ✅ |
-| 37 | N3 ρg 4-DB12 in 300×300 | 0.005027 | 0.005027 | ✅ |
-| 38 | N3 ρg < 1% fails | True | True | ✅ |
-| 39 | N3 s_tie,max = 16db | 192 | 192 | ✅ |
-| 40 | N3 600 col, 5/side, no crossties → fail | True | True | ✅ |
-| 41 | N3 1 crosstie each way (clear ≤ 150, alternate) → pass | True | True | ✅ |
-| 42 | N4 compression lap SD40 DB20 | 596.4 | 596.4 | ✅ |
-| 43 | N4 0.83 factor applies (Ast_tie ≥ 0.0015hs) | True | True | ✅ |
-| 44 | N4 ℓd DB20 → larger-bar row (1.7) | 933.8 | 933.8 | ✅ |
-| 45 | N4 ℓd DB16 → No.19-and-smaller row (2.1) | 604.7 | 604.7 | ✅ |
-| 46 | N4 Class B = 1.3ℓd | 1,214 | 1,214 | ✅ |
-| 47 | N4 0.83: legs_x=2, legs_y=3 → applies | True | True | ✅ |
-| 48 | N4 0.83: legs_x=3, legs_y=2 → not (legs ⊥ b short) | True | True | ✅ |
-| 49 | N4 SD50 compression lap (0.13fy−24)db | 993.5 | 993.5 | ✅ |
-| 50 | N4 SD50 ψg 1.15 | 1.15 | 1.15 | ✅ |
-| 51 | N5 kgf-m Q | 0.01707 | 0.01707 | ✅ |
-| 52 | N5 kgf-m ratio midheight | 0.7501 | 0.75 | ✅ |
-| 53 | N5 report renders | True | True | ✅ |
-| 54 | N6 Q > 0.05 stops | True | True | ✅ |
-| 55 | N6 SMF stops | True | True | ✅ |
-| 56 | N7 Mn(no φ) > φMn at same P | True | True | ✅ |
-| 57 | K4 IMF so,max = min(8db, 200, b/2) (mm) | 160 | 160 | ✅ |
-| 58 | K4 IMF ℓo = max(ℓu/6, max dim, 450) (mm) | 750 | 750 | ✅ |
-| 59 | K4 IMF so 150 ok | True | True | ✅ |
-| 60 | K4 IMF so 200 fails | True | True | ✅ |
-| 61 | K4 IMF Grade 550 so,max = min(6db, 150) | 120 | 120 | ✅ |
-| 62 | K4 Mn max over design Pu | 2.937e+08 | 2.937e+08 | ✅ |
-| 63 | K4 IMF Ve = 2Mn/ℓu (no Ω0 case) | 1.958e+05 | 1.958e+05 | ✅ |
-| 64 | K4 IMF Ve = lesser with Ω0E | 5e+04 | 5e+04 | ✅ |
-| 65 | K4 OMF ℓu > 5c1 → 18.3.3 n/a | True | True | ✅ |
-| 66 | K4 IMF applies for any ℓu | True | True | ✅ |
-| 67 | K5 §15.5 f′c floor 18 < 0.7×28 → required | True | True | ✅ |
-| 68 | K5 §15.5(c) equivalent f′c | 27.3 | 27.3 | ✅ |
-| 69 | K5 §15.5 floor 21 ≥ 19.6 → not required | True | True | ✅ |
-| 70 | K5 §15.5(c) cap f′c,col ≤ 2.5 f′c,floor | 22.25 | 22.25 | ✅ |
-| 71 | K5 §16.3.4.1 dowels 0.005Ag (mm²) | 800 | 800 | ✅ |
-| 72 | K5 dowel count DB20 | 4 | 4 | ✅ |
-| 73 | K5 IMF end-to-end runs, report renders | True | True | ✅ |
-| 74 | K5 kgf-m fc_floor converted (ratio) | 0.6429 | 0.6429 | ✅ |
-| 75 | K5 §15.5 flagged in report | True | True | ✅ |
-
-75/75 passed
+73 passed, 0 failed
+```

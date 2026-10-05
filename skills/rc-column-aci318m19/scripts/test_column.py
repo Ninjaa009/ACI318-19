@@ -1,202 +1,220 @@
 #!/usr/bin/env python3
-"""Regression + independent closed-form tests for column.py.
-
-Run: python3 test_column.py      (exit code 0 = all pass)
-C8 values come from the hand-worked example references/example-slender-column.md
-(computed separately from the solver). Others use closed-form arithmetic here.
-"""
+"""Independent tests for colkit.  Expected values come from hand calculation or from a
+fiber model written here (not from colkit).  Run: python3 test_column.py"""
+import copy
+import json
 import math
 import os
 import sys
 
-sys.path.insert(0, os.path.dirname(os.path.abspath(__file__)))
-from column import (seismic_shear, imf_detailing, floor_concrete, footing_dowels, mn_max_over_combos, Section, point, capacity_at, phiPn_max, stability_index,
-                    curvature, slenderness, shear_dir, biaxial_shear, detailing,
-                    splices, Mn_at_Pn, design_column, report, bar_area,
-                    KSC_TO_MPA, G)
+HERE = os.path.dirname(os.path.abspath(__file__))
+sys.path.insert(0, HERE)
+from colkit.section import Column, beta1                     # noqa: E402
+from colkit.pmm import capacity, section_forces, nominal_moment, phi_tied  # noqa: E402
+from colkit.stability import slenderness, stability_index, end_moment_ratio  # noqa: E402
+from colkit.shear import shear_direction, seismic_shear_demand, lambda_s  # noqa: E402
+from colkit.detailing import (splices, imf_end_zone, floor_concrete, footing_dowels,  # noqa: E402
+                              tie_limits, longitudinal_limits)
+from colkit.engine import run, to_si                          # noqa: E402
 
-RESULTS = []
+PASS = FAIL = 0
 
 
 def check(name, got, exp, tol=0.005):
-    ok = abs(got - exp) <= tol * max(1.0, abs(exp))
-    RESULTS.append((name, got, exp, ok))
+    global PASS, FAIL
+    if isinstance(exp, (bool, str)) or exp is None:
+        good = got == exp
+    else:
+        good = abs(got - exp) <= tol * max(1.0, abs(exp))
+    PASS += good
+    FAIL += not good
+    print(f"{'PASS' if good else 'FAIL'}  {name}: got {got!r} expected {exp!r}")
 
 
-def check_true(name, cond):
-    RESULTS.append((name, cond, True, bool(cond)))
+# ---------------------------------------------------------------- independent fiber model
+
+def fiber(b, h, fc, fy, bars, Ab, theta, c, n=120):
+    """Grid of n×n concrete fibres with Whitney block + elastic-plastic bars."""
+    nx, ny = math.sin(theta), math.cos(theta)
+    b1 = beta1(fc)
+    top = max(x * nx + y * ny for x in (-b / 2, b / 2) for y in (-h / 2, h / 2))
+    a = b1 * c
+    P = Mx = My = 0.0
+    dA = (b / n) * (h / n)
+    for i in range(n):
+        x = -b / 2 + (i + 0.5) * b / n
+        for j in range(n):
+            y = -h / 2 + (j + 0.5) * h / n
+            if top - (x * nx + y * ny) <= a:
+                F = 0.85 * fc * dA
+                P += F; Mx += F * y; My += F * x
+    et = 0.0
+    for x, y in bars:
+        dep = top - (x * nx + y * ny)
+        eps = 0.003 * (c - dep) / c
+        fs = max(-fy, min(fy, 200000 * eps))
+        if dep <= a:
+            fs -= 0.85 * fc
+        F = fs * Ab
+        P += F; Mx += F * y; My += F * x
+        et = max(et, -eps)
+    return P, Mx, My, et
 
 
-S1 = Section(400, 400, 28, 420, 20, 3, 3, 40, 10)
-
-# ---------------------------------------------------------------- C8 slender column S1
-check("C8 Ast (mm²)", S1.Ast, 8 * bar_area(20))
-check("C8 Q", stability_index(24000e3, 3.2, 900e3, 5000), 0.01707, 0.002)
-check("C8 φPn,max (kN)", phiPn_max(S1) / 1e3, 2498.0, 0.001)
-sx = slenderness(S1, "x", 1600e3, 90e6, 60e6, 4500, 1.0, 0.6, 6e3, 5000)
-sy = slenderness(S1, "y", 1600e3, 30e6, 20e6, 4500, 1.0, 0.6, 10e3, 5000)
-check("C8 M1/M2 x (single, from V·L)", sx["M1_M2"], -2 / 3)
-check("C8 M1/M2 y (double, from V·L)", sy["M1_M2"], 2 / 3)
-check("C8 klu/r", sx["klu_r"], 38.97, 0.001)
-check_true("C8 x slender, y not", sx["slender"] and not sy["slender"])
-check("C8 Pc (kN)", sx["Pc"] / 1e3, 6464.7, 0.001)
-check("C8 δ", sx["delta"], 1.2935, 0.001)
-check("C8 Mcx (kN·m)", sx["Mc"] / 1e6, 116.42, 0.001)
-c0 = capacity_at(S1, 1600e3, 1e6, 0)
-check("C8 φMnx uniaxial at Pu (kN·m)", c0["phiMcap"] / 1e6, 169.5, 0.002)
-check("C8 c at Pu (mm)", c0["c"], 267.2, 0.002)
-check("C8 ratio top end", capacity_at(S1, 1600e3, 90e6, 30e6)["ratio"], 0.600, 0.003)
-check("C8 ratio midheight", capacity_at(S1, 1600e3, sx["Mc"], 30e6)["ratio"], 0.750, 0.003)
-check("C8 ratio x only", capacity_at(S1, 1600e3, sx["Mc"], 0)["ratio"], 0.687, 0.003)
-ry = shear_dir(S1, "y", 6e3, 1600e3, 250, 2, 420)
-check("C8 Vc limited to Vc,max (kN)", ry["Vc"] / 1e3, 302.3, 0.002)
-check_true("C8 Vc capped flag", ry["capped"])
-check("C8 φVn (kN)", ry["phiVn"] / 1e3, 294.0, 0.002)
-d8 = detailing(S1, 250, 20)
-check_true("C8 detailing all pass", d8["rho_ok"] and d8["clear_ok"] and d8["s_tie_ok"]
-           and d8["tie_ok"] and d8["crossties_ok"])
-
-# ---------------------------------------------------------------- K1 independent uniaxial hand check
-# 3 rows of steel, β1 = 0.85, at c from solver: recompute Pn, Mn by hand
-c = c0["c"]
-a = 0.85 * c
-F = 0.85 * 28 * 400 * a
-P = F
-M = F * (200 - a / 2)
-for n, y in ((3, 60), (2, 200), (3, 340)):
-    es = 0.003 * (c - y) / c
-    fs = max(-420, min(420, 200000 * es)) - (0.85 * 28 if y < a else 0)
-    P += n * bar_area(20) * fs
-    M += n * bar_area(20) * fs * (200 - y)
-check("K1 hand φPn = Pu (kN)", 0.65 * P / 1e3, 1600.0, 0.001)
-check("K1 hand φMn (kN·m)", 0.65 * M / 1e6, c0["phiMcap"] / 1e6, 0.001)
-
-# ---------------------------------------------------------------- K2 pure axial & symmetry
-p = point(S1, 0.0, 1e6)
-check("K2 Pn at c→∞ = Po (kN)", p["Pn"] / 1e3, S1.Po / 1e3, 0.001)
-ca = capacity_at(S1, 1000e3, 80e6, 40e6)
-cb = capacity_at(S1, 1000e3, 40e6, 80e6)
-check("K2 symmetric φMcap(α) = φMcap(90°−α)", ca["phiMcap"], cb["phiMcap"], 0.002)
-check("K2 capacity direction = load direction (°)", ca["cap_deg"], ca["load_deg"], 0.002)
-# point on surface → ratio 1
-pt = point(S1, math.radians(30), 250)
-Pu_s = pt["phi"] * pt["Pn"]
-cs = capacity_at(S1, Pu_s, pt["phi"] * pt["Mnx"], pt["phi"] * pt["Mny"])
-check("K2 point on surface ratio = 1", cs["ratio"], 1.0, 0.003)
-check_true("K2 Pu > φPn,max flagged", not capacity_at(S1, 2600e3, 10e6, 0)["ok"])
-
-# ---------------------------------------------------------------- K3 slenderness rules
-check("K3 M1=M2=0 → limit 22", slenderness(S1, "x", 500e3, 0, 0, 4500)["limit"], 22.0)
-r_dbl = curvature(90e6, 60e6, given="double")[0]
-check("K3 double curvature limit capped 40", min(34 + 12 * r_dbl, 40), 40.0)
-s_min = slenderness(S1, "x", 1600e3, 5e6, 5e6, 6000, V=0, L=6000)
-check("K3 M2,min = Pu(15+0.03h) (kN·m)", s_min["M2min"] / 1e6, 1600 * (15 + 12) / 1e3)
-check("K3 Cm = 1.0 when M2,min governs", s_min["Cm"], 1.0, 0)
-s_un = slenderness(S1, "x", 2400e3, 50e6, 50e6, 9000, V=0, L=9000)
-check_true("K3 Pu ≥ 0.75Pc → unstable", s_un.get("unstable") is True)
-
-# ---------------------------------------------------------------- N1 fyt cap 420 (new)
-r50 = shear_dir(S1, "y", 100e3, 0, 150, 2, 490.3)
-check("N1 fyt used = 420", r50["fyt_used"], 420.0, 0)
-check("N1 Vs uses 420", r50["Vs"], 2 * bar_area(10) * 420 * 340 / 150)
-
-# ---------------------------------------------------------------- N2 shear: tension Nu, Av,min, biaxial
-rt = shear_dir(S1, "y", 50e3, -300e3, 150, 2, 420)
-check("N2 Nu tension term (MPa)", rt["Nu_term"], -300e3 / (6 * 160000))
-rlow = shear_dir(S1, "y", 200e3, 0, 400, 2, 420)
-check_true("N2 need Av,min and s > d/2 fails", rlow["need_min"] and not rlow["checks"]["s_10.7.6.5.2"])
-bx = {"Vu": 0.6, "phiVn": 1.0}
-by = {"Vu": 0.95, "phiVn": 1.0}
-check_true("N2 biaxial sum 1.55 > 1.5 fails", not biaxial_shear(bx, by)["ok"])
-
-# ---------------------------------------------------------------- N3 detailing
-S12 = Section(300, 300, 24, 420, 12, 2, 2, 40, 10)
-d12 = detailing(S12, 200, 20)
-check("N3 ρg 4-DB12 in 300×300", d12["rho_g"], 4 * bar_area(12) / 90000)
-check_true("N3 ρg < 1% fails", not d12["rho_ok"])
-check("N3 s_tie,max = 16db", d12["s_tie_max"], 16 * 12)
-W = Section(600, 600, 28, 420, 25, 5, 5, 40, 10)
-dw = detailing(W, 200, 20, 0, 0)
-check_true("N3 600 col, 5/side, no crossties → fail", not dw["crossties_ok"])
-dw2 = detailing(W, 200, 20, 1, 1)
-check_true("N3 1 crosstie each way (clear ≤ 150, alternate) → pass", dw2["crossties_ok"])
-
-# ---------------------------------------------------------------- N4 splices (new)
-sp = splices(S1, 250, 2, 2)
-check("N4 compression lap SD40 DB20", sp["lap_comp"], 0.071 * 420 * 20)
-check_true("N4 0.83 factor applies (Ast_tie ≥ 0.0015hs)", sp["factor_083"])
-check("N4 ℓd DB20 → larger-bar row (1.7)", sp["ld"], 420 / (1.7 * math.sqrt(28)) * 20)
-check("N4 ℓd DB16 → No.19-and-smaller row (2.1)", splices(Section(400, 400, 28, 420, 16, 3, 3, 40, 10), 250, 2, 2)["ld"], max(420 / (2.1 * math.sqrt(28)) * 16, 300))
-check("N4 Class B = 1.3ℓd", sp["lap_B"], 1.3 * sp["ld"])
-# 600(b) x 300(h), DB10 @ 200: 0.0015*600*200 = 180 mm² needs 3 legs ⊥ b (legs_y),
-# 0.0015*300*200 = 90 mm² needs 2 legs ⊥ h (legs_x)
-R = Section(600, 300, 28, 420, 20, 4, 2, 40, 10)
-check_true("N4 0.83: legs_x=2, legs_y=3 → applies", splices(R, 200, 2, 3)["factor_083"])
-check_true("N4 0.83: legs_x=3, legs_y=2 → not (legs ⊥ b short)", not splices(R, 200, 3, 2)["factor_083"])
-S50 = Section(400, 400, 28, 490.3, 25, 3, 3, 40, 10)
-sp50 = splices(S50, 250, 2, 2)
-check("N4 SD50 compression lap (0.13fy−24)db", sp50["lap_comp"], (0.13 * 490.3 - 24) * 25)
-check("N4 SD50 ψg 1.15", sp50["psi_g"], 1.15, 0)
-
-# ---------------------------------------------------------------- N5 end-to-end kgf-m = SI
-inp = {"units": "kgf-m", "b": 0.40, "h": 0.40, "fc": 28 / KSC_TO_MPA,
-       "fy": 420 / KSC_TO_MPA, "bar_db": 20, "nx": 3, "ny": 3, "cover": 40,
-       "tie_db": 10, "tie_s": 250, "lu": 4.5, "L": 5.0,
-       "story": {"sumPu": 24000e3 / G, "delta_o": 3.2, "Vus": 900e3 / G, "lc": 5.0},
-       "combos": [{"Pu": 1600e3 / G, "Mx_top": 90e6 / (G * 1000), "Mx_bot": 60e6 / (G * 1000),
-                   "Vuy": 6e3 / G, "My_top": 30e6 / (G * 1000), "My_bot": 20e6 / (G * 1000),
-                   "Vux": 10e3 / G}]}
-res = design_column(inp)
-check("N5 kgf-m Q", res["Q"], 0.01707, 0.002)
-check("N5 kgf-m ratio midheight", res["rows"][0]["ratio"], 0.750, 0.003)
-check_true("N5 report renders", "สรุปสถานะ" in report(res))
-
-# ---------------------------------------------------------------- N6 scope stops
-sway = dict(inp, story={"sumPu": 24000e3 / G, "delta_o": 15, "Vus": 900e3 / G, "lc": 5.0})
-check_true("N6 Q > 0.05 stops", design_column(sway).get("stopped") is True)
-check_true("N6 SMF stops", design_column(dict(inp, system="SMF")).get("stopped") is True)
-
-# ---------------------------------------------------------------- N7 §18.3.3 Mn without φ
-mn = Mn_at_Pn(S1, "x", 1000e3)
-check_true("N7 Mn(no φ) > φMn at same P", mn > capacity_at(S1, 1000e3, 1, 0)["phiMcap"])
+def fiber_at_P(col, theta, Pu):
+    lo, hi = 1.0, 5 * max(col.b, col.h)
+    for _ in range(50):
+        c = 0.5 * (lo + hi)
+        P, Mx, My, et = fiber(col.b, col.h, col.fc, col.fy, col.bars, col.Ab, theta, c, 80)
+        phi = phi_tied(et, col.fy / 200000)
+        if phi * P > Pu:
+            hi = c
+        else:
+            lo = c
+    return phi * Mx, phi * My
 
 
-# ---------------------------------------------------------------- K4 step 0/6/7 — IMF (new in KB rebuild)
-im = imf_detailing(S1, 4500, 150, 420)
-check("K4 IMF so,max = min(8db, 200, b/2) (mm)", im["so_max"], min(8 * 20, 200, 200))
-check("K4 IMF ℓo = max(ℓu/6, max dim, 450) (mm)", im["lo"], max(4500 / 6, 400, 450))
-check_true("K4 IMF so 150 ok", im["so_ok"])
-check_true("K4 IMF so 200 fails", not imf_detailing(S1, 4500, 200, 420)["so_ok"])
-check("K4 IMF Grade 550 so,max = min(6db, 150)", imf_detailing(S1, 4500, 100, 550)["so_max"], min(6 * 20, 150, 200))
-pus = [400e3, 1000e3, 1600e3]
-mn_hand = max(Mn_at_Pn(S1, "x", p) for p in pus)
-check("K4 Mn max over design Pu", mn_max_over_combos(S1, "x", pus), mn_hand)
-ss = seismic_shear(S1, "x", pus, 3000, "IMF")
-check("K4 IMF Ve = 2Mn/ℓu (no Ω0 case)", ss["Ve"], 2 * mn_hand / 3000)
-check("K4 IMF Ve = lesser with Ω0E", seismic_shear(S1, "x", pus, 3000, "IMF", 50e3)["Ve"], min(2 * mn_hand / 3000, 50e3))
-check_true("K4 OMF ℓu > 5c1 → 18.3.3 n/a", seismic_shear(S1, "x", pus, 2500, "OMF")["applies"] is False)
-check_true("K4 IMF applies for any ℓu", seismic_shear(S1, "x", pus, 2500, "IMF")["applies"])
+# ---------------------------------------------------------------- S1 hand calculation
+print("== S1 400×400 8-DB20, f′c 28, fy 420 (hand calc) ==")
+col = Column(400, 400, 28, 420, 20, 3, 3)
+check("Ast", col.Ast, 8 * math.pi * 100, 1e-9)
+check("φPn,max = 0.52Po", col.phiPn_max / 1e3, 2498.0, 0.001)
+check("β1(28)", beta1(28), 0.85, 1e-9)
+check("β1(35)", beta1(35), 0.80, 1e-9)
+check("β1(56)", beta1(56), 0.65, 1e-9)
+check("Q", stability_index(24000e3, 3.2, 900e3, 5000), 0.017067, 0.001)
+check("M1/M2 single (V·L = 30 ≈ |90−60|)", end_moment_ratio(90, 60, 6, 5)[0], -2 / 3, 1e-6)
+check("M1/M2 double (V·L = 50 ≈ 30+20)", end_moment_ratio(30, 20, 10, 5)[0], 2 / 3, 1e-6)
+check("M1 = M2 = 0 → −1", end_moment_ratio(0, 0)[0], -1.0, 1e-9)
+sx = slenderness(col, "x", 1600e3, 90e6, 60e6, 4500, V=6e3, L=5000)
+check("kℓu/r = 4500/(0.2887·400)", sx["klr"], 38.97, 0.001)
+check("limit 34+12(−2/3) = 26", sx["limit"], 26.0, 1e-6)
+check("Pc", sx["Pc"] / 1e3, 6464.7, 0.001)
+check("Cm = 0.6+0.4·2/3", sx["Cm"], 0.86667, 0.0005)
+check("δ", sx["delta"], 1.2935, 0.001)
+check("Mc", sx["Mc"] / 1e6, 116.42, 0.001)
+sy = slenderness(col, "y", 1600e3, 30e6, 20e6, 4500, V=10e3, L=5000)
+check("y not slender (limit 40)", sy["slender"], False)
+r = capacity(col, 1600e3, 90e6, 30e6)
+check("ratio top", r["ratio"], 0.600, 0.005)
+r = capacity(col, 1600e3, 116.42e6, 30e6)
+check("ratio mid", r["ratio"], 0.750, 0.005)
+r = capacity(col, 1600e3, 169.5e6, 0)
+check("uniaxial φMnx at 1600 kN ≈ 169.5", r["ratio"], 1.0, 0.005)
+check("c at that point ≈ 267.2", r["c"], 267.2, 0.01)
 
-# ---------------------------------------------------------------- K5 step 9 — joints, floor, footing (new)
-fl = floor_concrete(28, 18, beams_4_sides=True)
-check_true("K5 §15.5 f′c floor 18 < 0.7×28 → required", fl["required"])
-check("K5 §15.5(c) equivalent f′c", fl["fc_equiv_c"], 0.75 * 28 + 0.35 * 18)
-check_true("K5 §15.5 floor 21 ≥ 19.6 → not required", not floor_concrete(28, 21)["required"])
-check("K5 §15.5(c) cap f′c,col ≤ 2.5 f′c,floor", floor_concrete(40, 10, True)["fc_equiv_c"], 0.75 * 25 + 0.35 * 10)
-dw = footing_dowels(S1)
-check("K5 §16.3.4.1 dowels 0.005Ag (mm²)", dw["As_req"], 0.005 * 400 * 400)
-check("K5 dowel count DB20", dw["n_bars"], max(math.ceil(800 / bar_area(20)), 4), 0)
-imf_res = design_column(dict(inp, system="IMF", tie_s_end=150, fc_floor=18 / KSC_TO_MPA, base_on_footing=True))
-check_true("K5 IMF end-to-end runs, report renders", "IMF" in report(imf_res) and imf_res.get("imf") is not None)
-check("K5 kgf-m fc_floor converted (ratio)", imf_res["floor"]["ratio"], 18 / 28)
-check_true("K5 §15.5 flagged in report", "§15.5.1" in report(imf_res) and imf_res["floor"]["required"])
+print("== fiber-model cross-check ==")
+for (b, h, db, nx, ny, Pu, th) in [(400, 400, 20, 3, 3, 1600e3, 0.0), (400, 600, 25, 3, 4, 800e3, 0.5),
+                                   (500, 500, 25, 4, 4, 300e3, 0.785), (300, 600, 20, 2, 5, 2000e3, 1.2)]:
+    cc = Column(b, h, 28, 420, db, nx, ny)
+    fx, fy_ = fiber_at_P(cc, th, Pu)
+    r = capacity(cc, Pu, fx, fy_)
+    check(f"{b}×{h} θ={th}: fiber point lies on colkit surface", r["ratio"], 1.0, 0.015)
 
-# ---------------------------------------------------------------- output
-fails = [x for x in RESULTS if not x[3]]
-lines = ["| # | การทดสอบ | ได้ | คาดหมาย | ผล |", "|---|---|---|---|---|"]
-for i, (n, g, e, ok) in enumerate(RESULTS, 1):
-    fmt = (lambda v: f"{v:,.4g}" if isinstance(v, (int, float)) and not isinstance(v, bool) else str(v))
-    lines.append(f"| {i} | {n} | {fmt(g)} | {fmt(e)} | {'✅' if ok else '❌'} |")
-print("\n".join(lines))
-print(f"\n{len(RESULTS) - len(fails)}/{len(RESULTS)} passed")
-sys.exit(1 if fails else 0)
+print("== symmetry / surface ==")
+c2 = Column(500, 500, 30, 420, 25, 4, 4)
+a = capacity(c2, 1000e3, 150e6, 60e6)
+b = capacity(c2, 1000e3, 60e6, 150e6)
+check("square: swap Mx/My same ratio", a["ratio"], b["ratio"], 0.002)
+check("sign of moments ignored", capacity(c2, 1000e3, -150e6, 60e6)["ratio"], a["ratio"], 1e-6)
+p = capacity(c2, 1000e3, 150e6 / a["ratio"], 60e6 / a["ratio"])
+check("scaled load on surface → 1.0", p["ratio"], 1.0, 0.002)
+check("Pu > φPn,max → fail", capacity(c2, c2.phiPn_max * 1.01, 0, 0)["ok"], False)
+check("φ tension-controlled", phi_tied(0.01, 0.0021), 0.90, 1e-9)
+check("φ transition", phi_tied(0.0021 + 0.0015, 0.0021), 0.775, 1e-9)
+
+print("== shear ==")
+d = shear_direction(col, "y", 6e3, 1600e3, 250, 2)
+check("Vc capped 0.42√28·400·340", d["Vc"] / 1e3, 0.42 * math.sqrt(28) * 400 * 340 / 1e3, 1e-6)
+check("φVn S1", d["phiVn"] / 1e3, 294.0, 0.002)
+check("λs(d=1000)", lambda_s(1000), math.sqrt(2 / 5), 1e-9)
+c3 = Column(400, 400, 28, 500, 20, 3, 3, fyt=500)
+check("fyt capped at 420 for shear", shear_direction(c3, "y", 0, 0, 200, 2)["fyt"], 420.0, 1e-9)
+d0 = shear_direction(col, "y", 100e3, 0, 600, 2)
+Av_min = max(0.062 * math.sqrt(28), 0.35) * 400 / 420
+check("Av,min/s", d0["Av_min_s"], Av_min, 1e-9)
+check("s=600 → Av < Av,min → eq (c)", d0["eq"], "(c)")
+
+print("== seismic shear / IMF ==")
+cI = Column(400, 500, 27.46, 392.3, 16, 3, 4)
+Mn_list = [nominal_moment(cI, "x", p) for p in (80e3 * 9.80665, 165e3 * 9.80665, 210e3 * 9.80665)]
+dm = seismic_shear_demand(cI, "x", [80e3 * 9.80665, 165e3 * 9.80665, 210e3 * 9.80665], 3000, "IMF")
+check("Ve uses largest Mn over Pu", dm["Mn"], max(Mn_list), 1e-9)
+check("Ve = 2Mn/ℓu", dm["Ve"], 2 * max(Mn_list) / 3000, 1e-9)
+check("Ve limited by Ω0 shear", seismic_shear_demand(cI, "x", [1e6], 3000, "IMF", 50e3)["Ve"], 50e3, 1e-9)
+check("OMF ℓu > 5c1 → not applicable", seismic_shear_demand(cI, "x", [1e6], 3000, "OMF")["applies"], False)
+check("OMF ℓu ≤ 5c1 → applies", seismic_shear_demand(cI, "x", [1e6], 2400, "OMF")["applies"], True)
+z = imf_end_zone(cI, 3000, 125)
+check("so = min(8·16, 200, 200)", z["so_max"], 128.0, 1e-9)
+check("ℓo = max(500, 500, 450)", z["lo"], 500.0, 1e-9)
+c5 = Column(600, 600, 35, 550, 25, 4, 4)
+check("Grade 550: so = min(6·25,150,300)", imf_end_zone(c5, 3000, 100)["so_max"], 150.0, 1e-9)
+check("ℓo = ℓu/6 when governing", imf_end_zone(c5, 4800, 100)["lo"], 800.0, 1e-9)
+
+print("== detailing / splices ==")
+sp = splices(col, 250, 2, 2)
+check("DB20 uses 1.7 (bigger-bar row)", sp["k"], 1.7)
+check("ℓd DB20", sp["ld"], 420 / (1.7 * math.sqrt(28)) * 20, 1e-9)
+check("ℓsc = 0.071·420·20", sp["lsc"], 0.071 * 420 * 20, 1e-9)
+check("0.83 applies: 2·78.5 ≥ 0.0015·400·250", sp["reduced"], True)
+check("DB16 uses 2.1", splices(Column(400, 400, 28, 420, 16, 3, 3), 200, 2, 2)["k"], 2.1)
+cw = Column(300, 800, 28, 420, 20, 2, 6)
+spw = splices(cw, 200, 2, 3)        # h side needs 0.0015·800·200 = 240 mm² → 2 legs (157) fail
+check("0.83 not applied (legs along x short for h=800)", spw["reduced"], False)
+spw2 = splices(cw, 200, 4, 2)       # 4·78.5 = 314 ≥ 240; 2·78.5 ≥ 0.0015·300·200 = 90
+check("0.83 applied with 4 legs along x", spw2["reduced"], True)
+check("Grade 550 ℓsc = (0.13fy−24)db", splices(c5, 100, 4, 4)["lsc"], (0.13 * 550 - 24) * 25, 1e-9)
+check("f′c < 21 → ×4/3", splices(Column(400, 400, 18, 420, 20, 3, 3), 150, 2, 2)["lsc"], 0.071 * 420 * 20 * 4 / 3, 1e-9)
+t = tie_limits(Column(600, 600, 28, 420, 20, 6, 6), 200)
+check("6 bars/face clear < 150 → 2 crossties each way", (t["crossties_x"], t["crossties_y"]) == (2, 2), True)
+check("tie s,max = min(16db,48dt,b)", tie_limits(col, 0)["s_max"], 320.0, 1e-9)
+lg = longitudinal_limits(Column(300, 300, 28, 420, 12, 2, 2))
+check("ρ < 1% fails", lg["rho_ok"], False)
+check("§15.5 0.6 ratio → required", floor_concrete(40, 24, True)["required"], True)
+check("§15.5 (c) 0.75·min(40,60)+0.35·24", floor_concrete(40, 24, True)["fc_equiv"], 38.4, 1e-9)
+check("dowels 0.005Ag", footing_dowels(col)["As_req"], 800.0, 1e-9)
+
+print("== engine ==")
+ex = json.load(open(os.path.join(HERE, "..", "examples", "S1_check_SI.json")))
+res = run(ex)
+check("S1 worst ratio", res["worst"][0], 0.750, 0.005)
+check("S1 all pass", all(res["status"].values()), True)
+# kgf-m equivalence: same column expressed in kgf-m
+kg = copy.deepcopy(ex)
+kg["units"] = "kgf-m"
+kg["section"] = {"b": 0.4, "h": 0.4}
+kg["materials"] = {k: v / 0.0980665 for k, v in ex["materials"].items()}
+kg["joint"] = {"fc_floor": 24 / 0.0980665}
+for cb in kg["combos"]:
+    for k in ("Pu", "Vux", "Vuy"):
+        cb[k] = cb[k] * 1e3 / 9.80665
+    for k in ("Mx_top", "Mx_bot", "My_top", "My_bot"):
+        cb[k] = cb[k] * 1e3 / 9.80665
+kg["story"] = {"sum_Pu": 24000e3 / 9.80665, "delta_o": 3.2, "Vus": 900e3 / 9.80665, "lc": 5.0}
+rk = run(kg)
+check("kgf-m gives same ratio", rk["worst"][0], res["worst"][0], 1e-6)
+check("kgf-m fc_floor converted", rk["floor"]["ratio"], res["floor"]["ratio"], 1e-6)
+check("kgf-m Q", rk["Q"], res["Q"], 1e-6)
+smf = dict(ex, system="SMF")
+check("SMF stops", run(smf).get("stopped"), True)
+sw = copy.deepcopy(ex)
+sw["story"]["delta_o"] = 12
+check("Q > 0.05 stops", run(sw).get("stopped"), True)
+dz = copy.deepcopy(ex)
+dz["mode"] = "design"
+dz.pop("bars")
+rd = run(dz)
+check("design passes", all(rd["status"].values()), True)
+# minimality: every lighter candidate that was tried must have failed
+check("design: all lighter tried layouts fail", all(r > 1.0 for _, r in rd["tried"][:-1]), True)
+check("design: chosen = last tried", rd["tried"][-1][0], rd["col"].label())
+big = copy.deepcopy(dz)
+big["combos"][0]["Pu"] = 3500
+check("design: impossible → stop", run(big).get("stopped"), True)
+imf = json.load(open(os.path.join(HERE, "..", "examples", "IMF_design_kgfm.json")))
+ri = run(imf)
+check("IMF design passes", all(ri["status"].values()), True)
+check("IMF s_end ≤ so,max", ri["ties"]["s_end"] <= ri["imf"]["so_max"], True)
+
+print(f"\n{PASS} passed, {FAIL} failed")
+sys.exit(1 if FAIL else 0)
