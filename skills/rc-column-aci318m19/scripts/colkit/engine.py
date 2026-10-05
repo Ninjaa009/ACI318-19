@@ -252,7 +252,13 @@ def run(inp):
             res_head["messages"].append(("FAIL", "22.4", f"ไม่มีการจัดเหล็กที่ผ่านใน ρ ≤ {si.get('design', {}).get('rho_max', 0.04):.0%} — ขยายหน้าตัด"))
             res_head["stopped"] = True
             return res_head
-        ties = design_ties(si, col, si.get("ties", {}).get("db"))
+        want = si.get("ties", {}).get("db")
+        need = 10.0 if col.db <= 32 else 12.0                             # 25.7.2.2
+        if want is not None and want < need - 0.6:
+            res_head["messages"].append(("WARN", "25.7.2.2", f"ปลอก DB{want:g} เล็กกว่าขั้นต่ำสำหรับเหล็กยืน DB{col.db:g} "
+                                         f"→ ใช้ DB{need:g} แทน"))
+            want = need
+        ties = design_ties(si, col, want)
     else:
         bars, tz = si["bars"], si.get("ties", {})
         col = Column(sec["b"], sec["h"], mats["fc"], mats["fy"], bars["db"], bars["nx"], bars["ny"],

@@ -211,6 +211,11 @@ check("design: chosen = last tried", rd["tried"][-1][0], rd["col"].label())
 big = copy.deepcopy(dz)
 big["combos"][0]["Pu"] = 3500
 check("design: impossible → stop", run(big).get("stopped"), True)
+sm = copy.deepcopy(dz)
+sm["ties"] = {"db": 9}
+rs = run(sm)
+check("design: RB9 request bumped to DB10", rs["ties"]["db"], 10.0, 1e-9)
+check("design: bump reported", any(m[1] == "25.7.2.2" for m in rs["messages"]), True)
 imf = json.load(open(os.path.join(HERE, "..", "examples", "IMF_design_kgfm.json")))
 ri = run(imf)
 check("IMF design passes", all(ri["status"].values()), True)

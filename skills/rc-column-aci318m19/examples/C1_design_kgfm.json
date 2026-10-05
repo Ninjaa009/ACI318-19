@@ -1,0 +1,22 @@
+{
+  "mode": "design",
+  "units": "kgf-m",
+  "system": null,
+  "section": {"b": 0.35, "h": 0.35},
+  "materials": {"fc": 280, "fy": 4000, "fyt": 2400},
+  "cover": 40,
+  "design": {"db_options": [16, 20, 25], "rho_max": 0.04},
+  "ties": {"db": 9},
+  "length": {"lu": 3.5, "L": 4.0, "k": 1.0, "beta_dns": 0.6},
+  "story": {"sum_Pu": 1800000, "delta_o": 5.0, "Vus": 95000, "lc": 4.0},
+  "combos": [
+    {"name": "1.4D+1.7L", "Pu": 135000, "Mx_top": 4200, "Mx_bot": -3000, "Vuy": 1800,
+     "My_top": 2600, "My_bot": -1900, "Vux": 1130},
+    {"name": "0.75(1.4D+1.7L+1.7W)", "Pu": 108000, "Mx_top": 7800, "Mx_bot": -7200, "Vuy": 3750,
+     "My_top": 2100, "My_bot": -1500, "Vux": 900},
+    {"name": "0.9D+1.3W", "Pu": 52000, "Mx_top": 6500, "Mx_bot": -6300, "Vuy": 3200,
+     "My_top": 900, "My_bot": -600, "Vux": 380}
+  ],
+  "joint": {"fc_floor": 240, "beams_4_sides": true},
+  "base_on_footing": true
+}

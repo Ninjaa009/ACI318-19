@@ -76,7 +76,7 @@ SMF (§18.7), โครง sway, เสากลม/ปลอกเกลีย�
 - `scripts/column.py` — CLI · `scripts/test_column.py` — เทียบค่ามือ + fiber model ที่เขียนแยก
 - `kb/` — สรุป ACI 318-19 บท 6, 10, 15, 16, 18, 19, 20, 21, 22, 25 + `INDEX.md`
 - `references/si-formulas.md`, `references/si-constants-318m.md`, `references/test-results.md`
-- `examples/` — `S1_check_SI` (ตรวจ, SI) และ `IMF_design_kgfm` (ออกแบบ, IMF, kgf-m) พร้อมรายงาน
+- `examples/` — `S1_check_SI` (ตรวจ, SI), `IMF_design_kgfm` (ออกแบบ, IMF, kgf-m) และ `C1_design_kgfm` (ออกแบบ, ไม่ใช่ระบบแผ่นดินไหว, kgf-m) พร้อมรายงาน
 
 ## ความถูกต้อง
 

@@ -81,8 +81,10 @@ PASS  design passes: got True expected True
 PASS  design: all lighter tried layouts fail: got True expected True
 PASS  design: chosen = last tried: got '8-DB16 (3×3)' expected '8-DB16 (3×3)'
 PASS  design: impossible → stop: got True expected True
+PASS  design: RB9 request bumped to DB10: got 10.0 expected 10.0
+PASS  design: bump reported: got True expected True
 PASS  IMF design passes: got True expected True
 PASS  IMF s_end ≤ so,max: got True expected True
 
-73 passed, 0 failed
+75 passed, 0 failed
 ```
