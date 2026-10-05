@@ -405,7 +405,9 @@ $$\frac{1.5\,\delta_u}{h_{wcs}} \ge \frac{\ell_w}{600c}$$
   - (ii) **b ≥ √(0.025c·ℓw)**
   - (iii) **δc/hwcs ≥ 1.5δu/hwcs** โดย (ใหม่ใน 318-19)
 
-$$\frac{\delta_c}{h_{wcs}} = \frac{1}{100}\left[4 - \frac{1}{50}\left(\frac{\ell_w}{b}\right)\left(\frac{c}{b}\right) - \frac{V_e}{8\sqrt{f'_c}A_{cv}}\right] \ge 0.015$$
+$$\frac{\delta_c}{h_{wcs}} = \frac{1}{100}\left[4 - \frac{1}{50}\left(\frac{\ell_w}{b}\right)\left(\frac{c}{b}\right) - \frac{V_e}{8\sqrt{f'_c}A_{cv}}\right]$$
+
+ค่า δc/hwcs จากสมการนี้ **ไม่ต้องใช้น้อยกว่า 0.015** (ถ้าคำนวณได้ต่ำกว่า ใช้ 0.015 ได้)
 
 **วิธี stress-based (18.10.6.3)** — ผนังอื่น: ต้องมี special boundary element ที่ขอบผนังและขอบช่องเปิด ถ้าหน่วยแรงอัดที่ผิวนอกสุด (ชุดผสมที่มี E, แบบจำลองยืดหยุ่นเชิงเส้น หน้าตัดรวม) **> 0.2f′c** — หยุดได้ที่ **< 0.15f′c**
 
