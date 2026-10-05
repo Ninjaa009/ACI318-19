@@ -53,6 +53,8 @@ def build(res):
                  f"{f.M(g('My_top'))} | {f.M(g('My_bot'))} | {f.F(g('Vux'))} | {f.F(g('Vuy'))} |")
     L += ["", "Mx ดัดรอบแกน x (ความลึก h) คู่กับ Vuy · My ดัดรอบแกน y (ความลึก b) คู่กับ Vux"]
 
+    if si.get("_trace_md"):
+        L += ["", si["_trace_md"], ref("references/staad-sign-convention.md")]
     # 3
     L += ["", "## 3. โครงเซ (sway) หรือไม่", ""]
     if "Q" in res:

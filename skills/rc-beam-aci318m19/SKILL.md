@@ -38,6 +38,20 @@ description: ออกแบบ (เลือกเหล็กบน/ล่า�
 3. ไม่ผ่าน: εt ไม่ถึง/เหล็กไม่พอ → เพิ่มความลึก; เฉือนเกิน §22.5.1.2 → ขยายหน้าตัด; ปลอกถี่เกิน → เพิ่มขา แล้วรันใหม่
 4. ส่งรายงานทั้งฉบับและสรุปสั้น ๆ เป็นภาษาไทย
 
+## อินพุตจาก STAAD.Pro (แนะนำ)
+
+ถ้าผู้ใช้มีไฟล์ `.std` และตารางแรงจาก STAAD (คัดลอกตาราง **Beam Section Forces** หรือ Beam End Forces วางเป็นข้อความ, หน่วย kN–m) **ห้ามแปลงเครื่องหมายเอง** ให้ใช้:
+
+```
+python3 scripts/from_staad.py model.std forces.txt --kind beam --member <เลข> --lc <combo ...> --fc <f′c ทรงกระบอก> --fy <MPa> -o input.json
+python3 scripts/beam.py input.json
+```
+
+- สคริปต์อ่านแกน local, YD/ZD, start/end เอง ตามกฎใน `references/staad-sign-convention.md` (ยืนยันกับผล STAAD จริง) และใส่ตาราง "ที่มาของแรง" ในรายงานให้ตรวจย้อนได้
+- **f′c ต้องถามผู้ใช้** — STAAD เก็บ FCU (กำลังลูกบาศก์) ไม่ใช่ f′c ทรงกระบอก · ใช้เฉพาะ combo กำลัง (ไม่ใช้ combo service)
+- คาน: **ต้องใช้ตาราง Beam Section Forces** (ตาราง End Forces ไม่มีกลางช่วง) · M, V คิดที่ผิวเสา · ใส่ `--position perimeter|interior` และ `--support` ด้วย
+- สคริปต์หยุดเมื่อเจอ BETA ≠ 0, สมาชิกเอียง, หน้าตัดที่ไม่ใช่ PRIS — บอกผู้ใช้และขอข้อมูลเพิ่ม
+
 ## โหมด
 
 - `"mode": "design"` — เหล็กล่างต่อเนื่องตลอดช่วง (เลือกจากโมเมนต์บวกมากสุด), เหล็กบนต่อเนื่อง ≥ 2 เส้น + เหล็กเสริมพิเศษที่แต่ละจุดรองรับ (ขนาดเดียวกัน), ไล่ขนาดใน `design.db_options` แล้วเลือก As น้อยสุดที่ผ่าน; ปลอกเลือกระยะมากสุด (ทีละ 25 mm) ที่ผ่านทุกข้อ แยกโซนปลายกับกลาง; IMF เพิ่มเหล็กล่างให้ผ่าน §18.4.2.2 อัตโนมัติ; คานริมเพิ่มเหล็กบนต่อเนื่องตาม §9.7.7.1
@@ -70,6 +84,7 @@ description: ออกแบบ (เลือกเหล็กบน/ล่า�
 - `scripts/beamkit/` — `section`, `flexure`, `shear`, `detailing`, `engine` (check/design), `report`, `rcsi` (โมดูลร่วมกับสกิลเสา)
 - `scripts/beam.py` — CLI · `scripts/test_beam.py` — เทียบค่ามือ + strip model ที่เขียนแยก
 - `kb/` — สรุป ACI 318-19 บท 9, 18, 20, 21, 22, 24, 25 + `INDEX.md`
+- `scripts/from_staad.py` + `scripts/*/staadio.py` — แปลงผล STAAD (โมดูลร่วม) · `references/staad-sign-convention.md`
 - `references/si-formulas.md`, `references/si-constants-318m.md`, `references/test-results.md`
 - `examples/` — `B1_design_kgfm` (ออกแบบ), `B2_check_SI` (ตรวจ), `B3_IMF_design_kgfm` (ออกแบบ IMF) พร้อมรายงาน
 

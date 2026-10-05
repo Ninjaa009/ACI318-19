@@ -39,6 +39,20 @@ description: ออกแบบ (เลือกเหล็กยืน ปล�
 3. ไม่ผ่าน: δ สูง/ไม่เสถียร → ขยายหน้าตัดก่อน; กำลังไม่พอ → `mode: "design"` หรือเพิ่มเหล็ก; เฉือน → ลดระยะปลอก/เพิ่มขา แล้วรันใหม่
 4. ส่งรายงานทั้งฉบับ (ทุกหัวข้อมีบรรทัด "อ้างอิง: kb/…") และสรุปสั้น ๆ เป็นภาษาไทย
 
+## อินพุตจาก STAAD.Pro (แนะนำ)
+
+ถ้าผู้ใช้มีไฟล์ `.std` และตารางแรงจาก STAAD (คัดลอกตาราง **Beam Section Forces** หรือ Beam End Forces วางเป็นข้อความ, หน่วย kN–m) **ห้ามแปลงเครื่องหมายเอง** ให้ใช้:
+
+```
+python3 scripts/from_staad.py model.std forces.txt --kind column --member <เลข> --lc <combo ...> --fc <f′c ทรงกระบอก> --fy <MPa> -o input.json
+python3 scripts/column.py input.json
+```
+
+- สคริปต์อ่านแกน local, YD/ZD, start/end เอง ตามกฎใน `references/staad-sign-convention.md` (ยืนยันกับผล STAAD จริง) และใส่ตาราง "ที่มาของแรง" ในรายงานให้ตรวจย้อนได้
+- **f′c ต้องถามผู้ใช้** — STAAD เก็บ FCU (กำลังลูกบาศก์) ไม่ใช่ f′c ทรงกระบอก · ใช้เฉพาะ combo กำลัง (ไม่ใช้ combo service)
+- เสา: Pu = แรงอัดมากสุด (ปลายล่าง แม้ start อยู่บน), ทิศการดัดจากเครื่องหมาย, ℓu = L − ความลึกคานที่หัวเสา — ยืนยัน ℓu และระบบ (OMF/IMF) กับผู้ใช้ · ไม่มีข้อมูลชั้น → Q ยังไม่ตรวจ
+- สคริปต์หยุดเมื่อเจอ BETA ≠ 0, สมาชิกเอียง, หน้าตัดที่ไม่ใช่ PRIS — บอกผู้ใช้และขอข้อมูลเพิ่ม
+
 ## โหมด
 
 - `"mode": "check"` — ตรวจตามเหล็กที่ให้ใน `bars` และ `ties`
@@ -75,6 +89,7 @@ SMF (§18.7), โครง sway, เสากลม/ปลอกเกลีย�
 - `scripts/colkit/` — `section` (หน้าตัด), `pmm` (interaction แบบตัด polygon แม่นตรง), `stability`, `shear`, `detailing`, `engine` (check/design), `report`, `rcsi` (โมดูลร่วมกับสกิลคาน)
 - `scripts/column.py` — CLI · `scripts/test_column.py` — เทียบค่ามือ + fiber model ที่เขียนแยก
 - `kb/` — สรุป ACI 318-19 บท 6, 10, 15, 16, 18, 19, 20, 21, 22, 25 + `INDEX.md`
+- `scripts/from_staad.py` + `scripts/*/staadio.py` — แปลงผล STAAD (โมดูลร่วม) · `references/staad-sign-convention.md`
 - `references/si-formulas.md`, `references/si-constants-318m.md`, `references/test-results.md`
 - `examples/` — `S1_check_SI` (ตรวจ, SI), `IMF_design_kgfm` (ออกแบบ, IMF, kgf-m) และ `C1_design_kgfm` (ออกแบบ, ไม่ใช่ระบบแผ่นดินไหว, kgf-m) พร้อมรายงาน
 

@@ -47,6 +47,8 @@ def build(res):
     L += ["", "M ลบ = ดึงบน · Mu, Vu ที่ผิวจุดรองรับ / หน้าตัดวิกฤต (§9.4.2–9.4.3)",
           ref("kb/chapter-09.md §9.4")]
 
+    if si.get("_trace_md"):
+        L += ["", si["_trace_md"], ref("references/staad-sign-convention.md")]
     # 3
     L += ["## 3. แรงดัด", "", "| หน้าตัด | ผิวรับแรงดึง | Mu | เหล็ก | d | εt | φ | φMn | Mu/φMn | As ≥ As,min | ผล |",
           "|---|---|---|---|---|---|---|---|---|---|---|"]

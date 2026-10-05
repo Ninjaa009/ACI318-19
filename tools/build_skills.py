@@ -12,25 +12,40 @@ import sys
 import zipfile
 
 ROOT = os.path.dirname(os.path.dirname(os.path.abspath(__file__)))
-SHARED = os.path.join(ROOT, "skills", "_shared", "rcsi.py")
-SKILLS = {
-    "rc-column-aci318m19": ("scripts/colkit/rcsi.py", "scripts/test_column.py"),
-    "rc-beam-aci318m19": ("scripts/beamkit/rcsi.py", "scripts/test_beam.py"),
+SHARED_DIR = os.path.join(ROOT, "skills", "_shared")
+SHARED_TEST = os.path.join(SHARED_DIR, "tests", "test_staadio.py")
+SKILLS = {   # skill: (package dir, test)
+    "rc-column-aci318m19": ("scripts/colkit", "scripts/test_column.py"),
+    "rc-beam-aci318m19": ("scripts/beamkit", "scripts/test_beam.py"),
 }
+# shared file → destination relative to the package dir
+SYNC = {"rcsi.py": "rcsi.py", "staadio.py": "staadio.py", "from_staad.py": "../from_staad.py",
+        "staad-sign-convention.md": "../../references/staad-sign-convention.md"}
 
 
 def main(argv):
     check_only = "--check" in argv
     bad = 0
-    for name, (copy_rel, test_rel) in SKILLS.items():
+    if not check_only:
+        r = subprocess.run([sys.executable, SHARED_TEST], capture_output=True, text=True)
+        print("_shared/staadio:", (r.stdout.strip().splitlines() or [r.stderr])[-1])
+        if r.returncode:
+            return 1
+    for name, (pkg_rel, test_rel) in SKILLS.items():
         sk = os.path.join(ROOT, "skills", name)
-        dst = os.path.join(sk, copy_rel)
+        pkg = os.path.join(sk, pkg_rel)
+        diffs = []
+        for src, rel in SYNC.items():
+            s_, d_ = os.path.join(SHARED_DIR, src), os.path.normpath(os.path.join(pkg, rel))
+            if check_only:
+                if not (os.path.exists(d_) and filecmp.cmp(s_, d_, shallow=False)):
+                    diffs.append(src)
+            else:
+                shutil.copyfile(s_, d_)
         if check_only:
-            same = os.path.exists(dst) and filecmp.cmp(SHARED, dst, shallow=False)
-            print(f"{name}: rcsi.py {'matches' if same else 'DIFFERS from'} skills/_shared")
-            bad += not same
+            print(f"{name}: " + ("shared files match" if not diffs else "DIFFERS: " + ", ".join(diffs)))
+            bad += bool(diffs)
             continue
-        shutil.copyfile(SHARED, dst)
         r = subprocess.run([sys.executable, os.path.join(sk, test_rel)], capture_output=True, text=True)
         last = r.stdout.strip().splitlines()[-1] if r.stdout.strip() else r.stderr
         print(f"{name}: {last}")
