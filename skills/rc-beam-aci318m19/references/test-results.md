@@ -1,6 +1,7 @@
 # ผลทดสอบ beam.py
 
-รันด้วย `python3 scripts/test_beam.py` — วันที่ 2026-10-04
+รันด้วย `python3 scripts/test_beam.py` — วันที่ 2026-10-05
+
 
 | # | การทดสอบ | ได้ | คาดหมาย | ผล |
 |---|---|---|---|---|
@@ -31,16 +32,18 @@
 | 25 | N4 ℓd DB25 SD40 bottom | 1,167 | 1,167 | ✅ |
 | 26 | N4 ℓd DB25 SD50 ψg=1.15 | 1,567 | 1,567 | ✅ |
 | 27 | N4 ℓd DB16 top other | 1,179 | 1,179 | ✅ |
-| 28 | N4 ℓdh DB25 | 747.7 | 747.7 | ✅ |
-| 29 | N4 compression lap DB25 SD40 | 745.5 | 745.5 | ✅ |
-| 30 | N5 min depth simple 6 m SD40 | 375 | 375 | ✅ |
-| 31 | N5 min depth SD50 | 412.7 | 412.7 | ✅ |
-| 32 | N5 crack s,max cc=50 | 255 | 255 | ✅ |
-| 33 | N6 kgf-m φMn = SI φMn | 2.751e+08 | 2.751e+08 | ✅ |
-| 34 | N6 kgf-m stirrup s | 250 | 250 | ✅ |
-| 35 | N6 report renders | True | True | ✅ |
-| 36 | N7 deep beam stops | True | True | ✅ |
-| 37 | N8 Mu<0 → tension top | True | True | ✅ |
-| 38 | N8 top bar ψt = 1.3 | 1.3 | 1.3 | ✅ |
+| 28 | N4 ℓd DB20 bottom → larger-bar row (1.7) | 933.8 | 933.8 | ✅ |
+| 29 | N4 ℓd DB19 bottom → 2.1 row | 718.1 | 718.1 | ✅ |
+| 30 | N4 ℓdh DB25 | 747.7 | 747.7 | ✅ |
+| 31 | N4 compression lap DB25 SD40 | 745.5 | 745.5 | ✅ |
+| 32 | N5 min depth simple 6 m SD40 | 375 | 375 | ✅ |
+| 33 | N5 min depth SD50 | 412.7 | 412.7 | ✅ |
+| 34 | N5 crack s,max cc=50 | 255 | 255 | ✅ |
+| 35 | N6 kgf-m φMn = SI φMn | 2.751e+08 | 2.751e+08 | ✅ |
+| 36 | N6 kgf-m stirrup s | 250 | 250 | ✅ |
+| 37 | N6 report renders | True | True | ✅ |
+| 38 | N7 deep beam stops | True | True | ✅ |
+| 39 | N8 Mu<0 → tension top | True | True | ✅ |
+| 40 | N8 top bar ψt = 1.3 | 1.3 | 1.3 | ✅ |
 
-38/38 passed
+40/40 passed

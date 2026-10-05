@@ -25,6 +25,7 @@ PHI_V = 0.75
 SQRT_FC_MAX = 8.3
 FY_MAX = 550.0           # 22.4.2.1 (Pn,max) / Table 20.2.2.4(a) -- used throughout (conservative)
 FYT_SHEAR_MAX = 420.0    # Table 20.2.2.4(a)
+SMALL_BAR_MAX = 19.5     # "No. 19 and smaller"; DB20 is treated as a larger bar
 
 
 def bar_area(db):
@@ -412,7 +413,7 @@ def splices(sec, s_tie, legs_x, legs_y):
     """10.7.5 + 25.4.2 / 25.5.2 / 25.5.5."""
     fy, fc, db = sec.fy_in, sec.fc, sec.db
     sfc = min(math.sqrt(fc), SQRT_FC_MAX)
-    k = 1.7 if db > 20 else 2.1
+    k = 1.7 if db > SMALL_BAR_MAX else 2.1   # Table 25.4.2.3: 2.1 only for No. 19 (19.1 mm) and smaller
     ld = max(fy * psi_g(fy) / (k * sfc) * db, 300.0)
     lap_B = max(1.3 * ld, 300.0)
     lap_A = max(1.0 * ld, 300.0)
@@ -710,7 +711,7 @@ def report(res):
     L.append("_สมมติฐาน: ACI 318M-19 · tied · non-sway · Es = 200,000 MPa · "
              f"εty = {sec.ety:.5f} · r = {'√(Ig/Ag)' if inp.get('r_method', 'sqrt') == 'sqrt' else '0.3h'} · "
              f"βdns = {inp.get('beta_dns', 0.6)} · (EI)eff สมการ ({inp.get('ei', 'a')}) · "
-             "M1 = M2 = 0 → M1/M2 = −1 · ค่าคงที่ SI ของ Ch.25 ยังไม่ได้เทียบเล่ม 318M · "
+             "M1 = M2 = 0 → M1/M2 = −1 · ค่าคงที่ SI ตรวจด้วยการแปลงหน่วยจาก 318-19 (ยังไม่เทียบเล่ม 318M ฉบับพิมพ์) · "
              "ผลนี้ใช้ประกอบรายการคำนวณ วิศวกรผู้รับผิดชอบต้องตรวจและลงนาม_")
     return "\n".join(L)
 

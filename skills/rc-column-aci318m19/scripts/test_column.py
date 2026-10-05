@@ -125,7 +125,8 @@ check_true("N3 1 crosstie each way (clear ≤ 150, alternate) → pass", dw2["cr
 sp = splices(S1, 250, 2, 2)
 check("N4 compression lap SD40 DB20", sp["lap_comp"], 0.071 * 420 * 20)
 check_true("N4 0.83 factor applies (Ast_tie ≥ 0.0015hs)", sp["factor_083"])
-check("N4 ℓd DB20 (ψg 1.0, 2.1)", sp["ld"], 420 / (2.1 * math.sqrt(28)) * 20)
+check("N4 ℓd DB20 → larger-bar row (1.7)", sp["ld"], 420 / (1.7 * math.sqrt(28)) * 20)
+check("N4 ℓd DB16 → No.19-and-smaller row (2.1)", splices(Section(400, 400, 28, 420, 16, 3, 3, 40, 10), 250, 2, 2)["ld"], max(420 / (2.1 * math.sqrt(28)) * 16, 300))
 check("N4 Class B = 1.3ℓd", sp["lap_B"], 1.3 * sp["ld"])
 # 600(b) x 300(h), DB10 @ 200: 0.0015*600*200 = 180 mm² needs 3 legs ⊥ b (legs_y),
 # 0.0015*300*200 = 90 mm² needs 2 legs ⊥ h (legs_x)

@@ -25,6 +25,7 @@ ES = 200_000.0              # MPa, 20.2.2.2
 ECU = 0.003                 # 22.2.2.1
 PHI_V = 0.75                # Table 21.2.1(b)
 SQRT_FC_MAX = 8.3           # MPa, 22.5.3.1 / 25.4.1.4
+SMALL_BAR_MAX = 19.5        # Table 25.4.2.3/25.4.2.5: "No. 19 and smaller" (19.1 mm); DB20 counts as larger
 FYT_SHEAR_MAX = 420.0       # MPa, Table 20.2.2.4(a) stirrups (deformed bars)
 
 
@@ -376,12 +377,12 @@ def ld_tension(db, fy, fc, top=False, epoxy=None, lam=1.0, good=True,
     pt_pe = min(pt * pe, 1.7)
     pg = psi_g(fy)
     if cb is not None:
-        ps = 0.8 if db <= 20 else 1.0
+        ps = 0.8 if db <= SMALL_BAR_MAX else 1.0
         conf = min((cb + Ktr) / db, 2.5)
         ld = fy / (1.1 * lam * sfc) * pt_pe * ps * pg / conf * db
         method = "Eq. 25.4.2.4a"
     else:
-        small = db <= 20
+        small = db <= SMALL_BAR_MAX
         k = (2.1 if small else 1.7) if good else (1.4 if small else 1.1)
         ld = fy * pt_pe * pg / (k * lam * sfc) * db
         method = f"Table 25.4.2.3 (k = {k})"
@@ -739,7 +740,7 @@ def report(res: dict) -> str:
     L.append("")
     L.append("_สมมติฐาน: ACI 318M-19 · หน่วยภายใน N–mm–MPa · Es = 200,000 MPa · "
              + ("ใช้ข้อยกเว้น εty = 0.002 (Grade 420)" if res['input'].get('grade420_exception') else "εty = fy/Es")
-             + " · ค่าคงที่ SI ใน Ch.25 ยังไม่ได้เทียบกับเล่ม 318M จริง · ผลนี้ใช้ประกอบรายการคำนวณ วิศวกรผู้รับผิดชอบต้องตรวจและลงนาม_")
+             + " · ค่าคงที่ SI ตรวจด้วยการแปลงหน่วยจาก 318-19 (ยังไม่เทียบเล่ม 318M ฉบับพิมพ์) · ผลนี้ใช้ประกอบรายการคำนวณ วิศวกรผู้รับผิดชอบต้องตรวจและลงนาม_")
     return "\n".join(L)
 
 

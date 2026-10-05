@@ -103,6 +103,9 @@ check("N4 ℓd DB25 SD50 ψg=1.15", ld_tension(25, 490.3, 28)["ld"],
       490.3 * 1.15 / (1.7 * sfc) * 25)
 check("N4 ℓd DB16 top other", ld_tension(16, 420, 28, top=True, good=False)["ld"],
       420 * 1.3 / (1.4 * sfc) * 16)
+check("N4 ℓd DB20 bottom → larger-bar row (1.7)", ld_tension(20, 420, 28)["ld"], 420 / (1.7 * sfc) * 20)
+chk_db19 = ld_tension(19, 420, 28)["ld"]
+check("N4 ℓd DB19 bottom → 2.1 row", chk_db19, max(420 / (2.1 * sfc) * 19, 300))
 pc = 28 / 105 + 0.6
 check("N4 ℓdh DB25", ldh(25, 420, 28)["ldh"],
       max(420 * 1.6 * 1.25 * pc / (23 * sfc) * 25 ** 1.5, 200, 150))

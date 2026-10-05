@@ -2,8 +2,6 @@
 
 รันด้วย `python3 scripts/test_column.py` — วันที่ 2026-10-05
 
-C8 = ตัวอย่างมือเสาชะลูด S1 (400×400, 8-DB20, Pu 1,600 kN) · K = สูตรปิดอิสระ · N = เคสใหม่ (fyt ≤ 420, ทาบ, crosstie, kgf-m, หยุดนอกขอบเขต)
-
 | # | การทดสอบ | ได้ | คาดหมาย | ผล |
 |---|---|---|---|---|
 | 1 | C8 Ast (mm²) | 2,513 | 2,513 | ✅ |
@@ -49,17 +47,18 @@ C8 = ตัวอย่างมือเสาชะลูด S1 (400×400, 8-D
 | 41 | N3 1 crosstie each way (clear ≤ 150, alternate) → pass | True | True | ✅ |
 | 42 | N4 compression lap SD40 DB20 | 596.4 | 596.4 | ✅ |
 | 43 | N4 0.83 factor applies (Ast_tie ≥ 0.0015hs) | True | True | ✅ |
-| 44 | N4 ℓd DB20 (ψg 1.0, 2.1) | 755.9 | 755.9 | ✅ |
-| 45 | N4 Class B = 1.3ℓd | 982.7 | 982.7 | ✅ |
-| 46 | N4 0.83: legs_x=2, legs_y=3 → applies | True | True | ✅ |
-| 47 | N4 0.83: legs_x=3, legs_y=2 → not (legs ⊥ b short) | True | True | ✅ |
-| 48 | N4 SD50 compression lap (0.13fy−24)db | 993.5 | 993.5 | ✅ |
-| 49 | N4 SD50 ψg 1.15 | 1.15 | 1.15 | ✅ |
-| 50 | N5 kgf-m Q | 0.01707 | 0.01707 | ✅ |
-| 51 | N5 kgf-m ratio midheight | 0.7501 | 0.75 | ✅ |
-| 52 | N5 report renders | True | True | ✅ |
-| 53 | N6 Q > 0.05 stops | True | True | ✅ |
-| 54 | N6 SMF stops | True | True | ✅ |
-| 55 | N7 Mn(no φ) > φMn at same P | True | True | ✅ |
+| 44 | N4 ℓd DB20 → larger-bar row (1.7) | 933.8 | 933.8 | ✅ |
+| 45 | N4 ℓd DB16 → No.19-and-smaller row (2.1) | 604.7 | 604.7 | ✅ |
+| 46 | N4 Class B = 1.3ℓd | 1,214 | 1,214 | ✅ |
+| 47 | N4 0.83: legs_x=2, legs_y=3 → applies | True | True | ✅ |
+| 48 | N4 0.83: legs_x=3, legs_y=2 → not (legs ⊥ b short) | True | True | ✅ |
+| 49 | N4 SD50 compression lap (0.13fy−24)db | 993.5 | 993.5 | ✅ |
+| 50 | N4 SD50 ψg 1.15 | 1.15 | 1.15 | ✅ |
+| 51 | N5 kgf-m Q | 0.01707 | 0.01707 | ✅ |
+| 52 | N5 kgf-m ratio midheight | 0.7501 | 0.75 | ✅ |
+| 53 | N5 report renders | True | True | ✅ |
+| 54 | N6 Q > 0.05 stops | True | True | ✅ |
+| 55 | N6 SMF stops | True | True | ✅ |
+| 56 | N7 Mn(no φ) > φMn at same P | True | True | ✅ |
 
-55/55 passed
+56/56 passed
