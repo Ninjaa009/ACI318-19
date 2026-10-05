@@ -1,0 +1,12 @@
+{
+  "units": "SI",
+  "b": 400, "h": 400, "fc": 28, "fy": 420, "fyt": 420,
+  "bar_db": 20, "nx": 3, "ny": 3, "cover": 40, "cover_to": "tie",
+  "tie_db": 10, "tie_s": 250, "tie_legs_x": 2, "tie_legs_y": 2,
+  "lu": 4.5, "L": 5.0, "k": 1.0, "beta_dns": 0.6, "dagg": 20,
+  "story": {"sumPu": 24000, "delta_o": 3.2, "Vus": 900, "lc": 5.0},
+  "combos": [
+    {"name": "1.2D+1.6L", "Pu": 1600, "Mx_top": 90, "Mx_bot": 60, "Vuy": 6,
+     "My_top": 30, "My_bot": 20, "Vux": 10}
+  ]
+}
