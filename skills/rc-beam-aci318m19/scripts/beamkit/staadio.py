@@ -263,12 +263,56 @@ def beam(model, forces, m, lcs):
                      "face_left": a0 * L, "face_right": (1 - a1) * L}}
 
 
+# ---------------------------------------------------------------- footings
+
+
+def footing(model, forces, m, lcs_service, lcs_ult):
+    """ftgkit pieces from the column standing on the footing (member m, vertical, BETA 0).
+    Plan axes: x = global X, y = global Z.  Column YD lies along X, ZD along Z.
+    My_plan (about the plan y-axis = global Z) = |Mz|; Mx_plan (about global X) = |My|;
+    Hx = |Shear-Y| (local y ∥ X), Hy = |Shear-Z|.  Values at the column BOTTOM."""
+    model.check_supported(m)
+    if not model.is_vertical(m):
+        raise ValueError(f"member {m} ไม่ใช่เสาแนวดิ่ง")
+    s, e = model.members[m]
+    pb = 1.0 if model.joints[s][1] > model.joints[e][1] else 0.0
+    yd, zd = model.prop[m]
+
+    def take(lc):
+        rows = forces.get((m, str(lc)))
+        if not rows:
+            raise ValueError(f"ไม่มีแรงของ member {m} LC {lc}")
+        return (at(rows, pb, FX), abs(at(rows, pb, MY)), abs(at(rows, pb, MZ)),
+                abs(at(rows, pb, FY)), abs(at(rows, pb, FZ)))
+    serv, ult, trace = [], [], []
+    for lc in lcs_service:
+        P, Mx, My, Hx, Hy = take(lc)
+        serv.append({"name": f"LC{lc}", "P": P, "Mx": Mx, "My": My, "Hx": Hx, "Hy": Hy})
+        trace.append(("ใช้งาน", lc, P, Mx, My, Hx, Hy))
+    for lc in lcs_ult:
+        P, Mx, My, Hx, Hy = take(lc)
+        ult.append({"name": f"LC{lc}", "Pu": P, "Mux": Mx, "Muy": My, "Hux": Hx, "Huy": Hy})
+        trace.append(("ประลัย", lc, P, Mx, My, Hx, Hy))
+    node = e if pb == 1.0 else s
+    return {"column": {"cx": yd * 1000.0, "cy": zd * 1000.0}, "service": serv, "ultimate": ult,
+            "trace": trace, "info": {"member": m, "node": node}}
+
+
 # ---------------------------------------------------------------- report helper
 
 
 def trace_md(kind, piece):
     """Markdown table: where each design value came from."""
     i = piece["info"]
+    if kind == "footing":
+        i = piece["info"]
+        L = [f"**ที่มาของแรง: STAAD member {i['member']} ที่ node {i['node']} (โคนเสา)** · แกนผัง x = X, y = Z ของ STAAD",
+             "cx = YD (ตาม X), cy = ZD (ตาม Z) · My(ผัง) = |Mz|, Mx(ผัง) = |My|, Hx = |Shear-Y|, Hy = |Shear-Z| (ค่าที่โคนเสา)", "",
+             "| ชุด | LC | P | Mx | My | Hx | Hy |", "|---|---|---|---|---|---|---|"]
+        for t in piece["trace"]:
+            L.append(f"| {t[0]} | {t[1]} | {t[2]:.2f} | {t[3]:.2f} | {t[4]:.2f} | {t[5]:.2f} | {t[6]:.2f} |")
+        L.append("\nขนาดโมเมนต์ใช้ค่าสัมบูรณ์ (ฐานสมมาตร เสาอยู่กึ่งกลาง) · หน่วย kN, kN·m")
+        return "\n".join(L)
     if kind == "column":
         L = [f"**ที่มาของแรง: STAAD member {i['member']}** · บน = node {i['top_node']}, ล่าง = node {i['bottom_node']}"
              + (" (start อยู่บน — สมาชิกกลับด้าน)" if i["flipped"] else ""),

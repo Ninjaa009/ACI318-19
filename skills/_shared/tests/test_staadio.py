@@ -77,6 +77,18 @@ check("beam 22 (along Z) face offset = col 1 ZD/2 = 0.2", b22["info"]["face_left
 check("beam 22 sagging mid 21.384", b22["combos"][0]["M_mid"], 21.384)
 check("beam 22 width 300 depth 500", (b22["section"]["b"], b22["section"]["h"]), (300.0, 500.0))
 
+print("== footings ==")
+ft = staadio.footing(model, sec, 30, ["102"], ["102"])
+u = ft["ultimate"][0]
+check("footing under col 30: bottom node 25", ft["info"]["node"], 25)
+check("Pu = axial at bottom 94.477", u["Pu"], 94.477)
+check("Muy(plan) = |Mz| bottom 9.289", u["Muy"], 9.289)
+check("Mux(plan) = |My| bottom 6.855", u["Mux"], 6.855)
+check("Hux = |Shear-Y| 10.015, Huy = |Shear-Z| 8.999", (round(u["Hux"], 3), round(u["Huy"], 3)), (10.015, 8.999))
+f1 = staadio.footing(model, end, 1, ["102"], ["102"])
+check("col 1 footprint cx = YD (along X) 500, cy = ZD 400", (f1["column"]["cx"], f1["column"]["cy"]), (500.0, 400.0))
+check("col 1 (upright) bottom = start: Pu 76.781", f1["ultimate"][0]["Pu"], 76.781)
+
 print("== guards ==")
 try:
     staadio.beam(model, end, 13, ["102"])

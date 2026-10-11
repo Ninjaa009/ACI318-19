@@ -17,6 +17,7 @@ SHARED_TEST = os.path.join(SHARED_DIR, "tests", "test_staadio.py")
 SKILLS = {   # skill: (package dir, test)
     "rc-column-aci318m19": ("scripts/colkit", "scripts/test_column.py"),
     "rc-beam-aci318m19": ("scripts/beamkit", "scripts/test_beam.py"),
+    "rc-footing-aci318m19": ("scripts/ftgkit", "scripts/test_footing.py"),
 }
 # shared file → destination relative to the package dir
 SYNC = {"rcsi.py": "rcsi.py", "staadio.py": "staadio.py", "from_staad.py": "../from_staad.py",

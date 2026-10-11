@@ -11,7 +11,8 @@
 2. **สกิลออกแบบ** (อัปโหลดเป็น zip ที่ claude.ai → Settings → Capabilities → Skills)
    - `skills/rc-column-aci318m19/` — แพ็กเกจ `scripts/colkit` (เสาปลอกเดี่ยว, 3D interaction, ชะลูด, OMF/IMF, design/check)
    - `skills/rc-beam-aci318m19/` — แพ็กเกจ `scripts/beamkit` (คานทั้งช่วง ซ้าย/กลาง/ขวา ทุก combo, OMF/IMF, design/check)
-   - ทั้งสองมี `kb/` (สำเนาบทที่เกี่ยวข้อง), `references/`, `examples/`, และรายงานอ้าง `kb/…` ทุกหัวข้อ
+   - `skills/rc-footing-aci318m19/` — แพ็กเกจ `scripts/ftgkit` (ฐานแผ่เดี่ยวบนดิน, qa ยอมให้ + combo ใช้งาน, กำลังด้วย combo ประลัย, design/check)
+   - ทุกสกิลมี `kb/` (สำเนาบทที่เกี่ยวข้อง), `references/`, `examples/`, และรายงานอ้าง `kb/…` ทุกหัวข้อ
 3. **โมดูลร่วม** `skills/_shared/` — แก้ที่นี่เท่านั้น แล้วรัน build
    - `rcsi.py` หน่วย/ค่าคงที่ SI/ℓd/ทาบ/รูปแบบรายงาน
    - `staadio.py` + `from_staad.py` แปลงผล STAAD → อินพุตสกิล · `staad-sign-convention.md`
@@ -26,7 +27,7 @@ python3 skills/rc-column-aci318m19/scripts/column.py <input.json>
 python3 skills/rc-beam-aci318m19/scripts/beam.py <input.json>
 python3 skills/<skill>/scripts/from_staad.py model.std forces.txt --kind column|beam --member N --lc 101 102 --fc .. --fy .. -o in.json
 ```
-Test ปัจจุบัน: staadio 38, เสา 75, คาน 55 — ต้องผ่านทั้งหมดก่อน commit · Python 3.11 ล้วน ไม่มี numpy
+Test ปัจจุบัน: staadio 45, เสา 75, คาน 55, ฐานราก 37 — ต้องผ่านทั้งหมดก่อน commit · Python 3.11 ล้วน ไม่มี numpy
 
 ## ข้อเท็จจริงที่ยืนยันแล้ว (ห้ามเปลี่ยนโดยไม่มีหลักฐาน)
 
@@ -54,3 +55,5 @@ Test ปัจจุบัน: staadio 38, เสา 75, คาน 55 — ต้
 - ทดสอบ BETA ≠ 0 และเสาไม่สมมาตรที่กลับด้าน (ขอผล STAAD จากผู้ใช้)
 - ผู้ใช้ยังไม่ได้ให้ f′c ทรงกระบอกและเกรดเหล็กจริงของโมเดล CC.std
 - เทียบ Ch.15/18 กับเล่ม 318M-19 เมื่อผู้ใช้ส่งมา
+- ฐานราก: ผู้ใช้เลือก "ฐานแผ่บนดิน + qa แบบยอมให้" ก่อน — ยังไม่มี pile cap (ถ้าจะทำ ใช้ checks/pressure ร่วม)
+- ฐานราก one-way shear ใช้ T22.5.5.1(c) (ไม่มีเหล็กเฉือน, λs = 1) — มักคุมความหนา

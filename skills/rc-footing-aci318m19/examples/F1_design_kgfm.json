@@ -1,0 +1,15 @@
+{
+  "mode": "design",
+  "units": "kgf-m",
+  "column": {"cx": 0.40, "cy": 0.40, "db": 20},
+  "materials": {"fc": 240, "fy": 4000, "fc_column": 280},
+  "cover": 75,
+  "soil": {"qa": 15, "qa_type": "gross", "Df": 1.5, "gamma": 1.8, "mu": 0.4},
+  "design": {"ratio": 1.0, "db_options": [12, 16, 20, 25], "h_min": 300},
+  "service": [
+    {"name": "D+L", "P": 85000, "Mx": 1500, "My": 2500, "Hx": 900, "Hy": 600}
+  ],
+  "ultimate": [
+    {"name": "1.4D+1.7L", "Pu": 125000, "Mux": 2200, "Muy": 3700, "Hux": 1300, "Huy": 900}
+  ]
+}
