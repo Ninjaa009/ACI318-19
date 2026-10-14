@@ -52,6 +52,7 @@ python3 scripts/footing.py input.json
 
 ## โหมด
 
+- **ความหนา:** ค่าเริ่มต้นหาฐานที่บางที่สุด — ถ้าแรงเฉือนทางเดียวไม่ผ่าน จะเพิ่มเหล็กล่าง (Vc ตาม 318-19 ขึ้นกับ ρw) ก่อนเพิ่มความหนา และรายงานทางเลือกแบบหนากว่าพร้อมผลต่างปริมาณคอนกรีต/เหล็กให้เทียบราคา · ℓdc ของเหล็กเสียบลดตาม §25.4.10 อัตโนมัติเมื่อไม่มีแรงดึงในเสาที่โคน ไม่ใช่ SDC D–F และรู้จำนวนเหล็ก (`column.n`)
 - `"mode": "design"` — ขนาดฐานเพิ่มทีละ 50 mm (สี่เหลี่ยมจัตุรัส หรือ `design.ratio` = L/B, หรือกำหนด `design.B`/`design.L`), ความหนาเริ่มที่ `design.h_min` เพิ่มทีละ 50 mm จนผ่านเฉือนทางเดียว punching และ ℓdc, เลือกเหล็กจาก `design.db_options` ให้ As น้อยสุด ระยะ 100 mm – min(2h, 450) ปัดลงทีละ 25 mm
 - `"mode": "check"` — ตรวจตาม `footing` และ `bars`
 
@@ -60,16 +61,17 @@ python3 scripts/footing.py input.json
 | key | ความหมาย | kgf-m | SI | default |
 |---|---|---|---|---|
 | `mode`, `units` | `design`/`check`, `kgf-m`/`SI` | | | design, kgf-m |
-| `column` | `{cx, cy, db}` — cx ตามแกน x (ด้าน B), db = เหล็กยืนเสา (ตรวจ ℓdc) | m | mm | **cx, cy ต้องให้** |
+| `column` | `{cx, cy, db, n, dowel_db, dowel_n}` — cx ตามแกน x (ด้าน B), db/n = เหล็กยืนเสาที่ยื่นลงฐาน (ตรวจ ℓdc), dowel_* = ใช้เหล็กเสียบแยก | m | mm | **cx, cy ต้องให้** |
 | `materials` | `{fc, fy, fc_column}` | ksc | MPa | fc_column = fc |
 | `soil` | `{qa, qa_type, Df, gamma, mu}` — Df = ความลึกท้องฐานจากผิวดิน | t/m², m, t/m³ | kPa, m, kN/m³ | qa_type gross, γ 1.8 / 18, ไม่มี μ = ไม่ตรวจเลื่อน |
 | `service[]` | `{name, P, Mx, My, Hx, Hy}` — แรงใช้งานที่โคนเสา | kgf, kgf·m | kN, kN·m | **ต้องให้** |
 | `ultimate[]` | `{name, Pu, Mux, Muy, Hux, Huy}` | kgf, kgf·m | kN, kN·m | **ต้องให้** |
 | `footing` (check) | `{B, L, h}` | m | mm | |
 | `bars` (check) | `{x: {db, s}, y: {db, s}}` — เหล็ก x วางขนานด้าน B | mm | mm | |
-| `design` | `{ratio, B, L, h_min, db_options}` | m | mm | 1.0, –, –, 300 mm, [12,16,20,25] |
+| `design` | `{ratio, B, L, h_min, db_options, prefer}` — prefer `thin` (บางสุด เพิ่มเหล็กล่างช่วยเฉือนได้) / `steel` (เหล็กน้อย หนากว่า) | m | mm | 1.0, –, –, 300 mm, [12,16,20,25], thin |
 | `cover`, `gamma_c` | ระยะหุ้ม, หน่วยน้ำหนักคอนกรีต | mm, t/m³ | mm, kN/m³ | 75, 2.4 / 23.6 |
 | `FS_overturning`, `FS_sliding`, `require_full_contact`, `alpha_s`, `sdc` | | | | 1.5, 1.5, false, 40, – |
+| `ldc_reduction` | ลด ℓdc เหล็กเสียบตาม §25.4.10 (As,req/As,prov ≥ 200 mm) เมื่อเข้าเงื่อนไข | | | true |
 
 แกน: **My** = โมเมนต์รอบแกน y → แรงดันแปรตามแนว x (ด้าน B) · **Mx** → แปรตามแนว y (ด้าน L) · ใส่ค่าโมเมนต์ได้ทั้งบวก/ลบ (ใช้ค่าสัมบูรณ์ เพราะฐานสมมาตร)
 

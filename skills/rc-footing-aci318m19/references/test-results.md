@@ -32,15 +32,20 @@ PASS  long direction no band: got 1.0 expected 1.0
 PASS  ℓd DB16 (clear ≥ 2db) = fy/(2.1√f′c)·db: got 597.7904761904762 expected 597.7904761904762
 == engine ==
 PASS  F1 design passes: got True expected True
-PASS  service total load = P + footing + soil above: got 1069704.478675 expected 1069704.478675
-PASS  F1 qmax (hand, in kern): got 0.14376989580486302 expected 0.14376989580486302
+PASS  service total load = P + footing + soil above: got 1067173.62747625 expected 1067173.62747625
+PASS  F1 qmax (hand, in kern): got 0.1432676773228929 expected 0.1432676773228929
 PASS  design is minimal: 50 mm smaller fails soil: got False expected False
 PASS  check mode h = 0.30 → shear fails: got False expected False
-PASS  SI input gives the same footing: got (2850.0, 2850.0, 500.0, 200.0) expected (2850.0, 2850.0, 500.0, 200.0)
+PASS  SI input gives the same footing: got (2850.0, 2850.0, 450.0, 275.0) expected (2850.0, 2850.0, 450.0, 275.0)
 PASS  large moment → partial contact handled: got True expected True
 PASS  large moment design still passes: got True expected True
+PASS  prefer=steel is never thinner than the default (thin): got True expected True
+PASS  without §25.4.10 the dowel ℓdc is the full value: got 388.11099443329346 expected 388.11099443329346
+PASS  §25.4.10: ℓdc = max(ratio·ℓdc, 200): got 200.0 expected 200
+PASS  column tension at base → no §25.4.10 reduction: got None expected None
+PASS  column tension → hooked dowels checked (ℓdh, ψo = 1.0): got True expected True
 PASS  SDC D stops: got True expected True
 PASS  missing service combos stops: got True expected True
 
-37 passed, 0 failed
+42 passed, 0 failed
 ```

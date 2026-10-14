@@ -7,7 +7,7 @@ import math
 from .rcsi import G, KSC, area
 from .pressure import solve
 from .checks import (Footing, face_moment, one_way_vu, flexure_required, flexure_check,
-                     one_way_check, punching, bearing, development, dowel_embedment)
+                     one_way_check, punching, bearing, development, dowel_embedment, column_tension)
 
 
 # ---------------------------------------------------------------- units
@@ -110,6 +110,32 @@ def _band_factor(f, direction):
     return (2 * beta / (beta + 1)) if is_short else 1.0
 
 
+def dowel_check(si, f, brg):
+    """Column bars (or separate dowels) into the footing.  §25.4.10 reduction is applied when
+    the code allows it: not SDC D–F, no tension in the column at its base, bars not hooked
+    for compression, and the provided area is known."""
+    col, mats = si["column"], si["materials"]
+    db = col.get("dowel_db") or col.get("db")
+    if not db:
+        return None
+    n = col.get("dowel_n") or col.get("n")
+    As_prov = n * area(db) if n else None
+    As_req = max(brg["As_min"], brg["As_extra"])
+    why = None
+    tension = column_tension(col, si["ultimate"])
+    allowed = si.get("ldc_reduction", True)
+    if not allowed:
+        why = "ผู้ใช้ปิด (ldc_reduction: false)"
+    elif si.get("sdc") in ("D", "E", "F"):
+        why = "SDC D–F (§25.4.10.2(e))"
+    elif tension:
+        why = "เสามีแรงดึงที่โคน (P/A − M/S < 0) — เหล็กเสียบต้องพัฒนาแรงดึงด้วย"
+    elif not As_prov:
+        why = "ไม่ได้ระบุจำนวนเหล็ก (column.n)"
+    return dowel_embedment(f, db, mats["fy"], As_req, As_prov, why is None, why, tension) | \
+        {"As_req": As_req, "As_prov": As_prov}
+
+
 def evaluate(si, f):
     mats, col = si["materials"], si["column"]
     res = {"f": f}
@@ -137,7 +163,7 @@ def evaluate(si, f):
     Pu_max = max(cb["Pu"] for cb in si["ultimate"])
     Ag_col = f.cx * f.cy
     res["bearing"] = bearing(f, Pu_max, mats.get("fc_column", mats["fc"]), Ag_col)
-    res["dowel"] = dowel_embedment(f, col.get("db", 20.0), mats["fy"]) if col.get("db") else None
+    res["dowel"] = dowel_check(si, f, res["bearing"])
     res["d_ok"] = min(f.dx, f.dy) >= 150.0                                   # 13.3.1.2
     sv = res["service"]
     res["status"] = {
@@ -186,13 +212,15 @@ def _size_plan(si, h, cx, cy, fc, fy):
     return None
 
 
-def _choose_bars(f, Mu, direction, opts):
+def _choose_bars(f, Mu, direction, opts, factor=1.0):
+    """Lightest bar set for max(As,req, As,min) × band × factor (factor > 1 adds steel
+    to raise ρw and therefore Vc of T22.5.5.1(c) instead of thickening the footing)."""
     w = f.L if direction == "x" else f.B
     req = flexure_required(f, Mu, direction)
     if req is None:
         return None
     As_min = 0.0018 * w * f.h
-    need = max(req, As_min) * _band_factor(f, direction)
+    need = max(req, As_min) * _band_factor(f, direction) * factor
     smax = min(2 * f.h, 450.0)
     best = None
     for db in opts:
@@ -209,51 +237,65 @@ def _choose_bars(f, Mu, direction, opts):
 
 
 def design(si):
+    """Thinnest footing first: at each h (50 mm steps) try the lightest bars, then add bottom
+    steel (up to ×2.5, s ≥ 100 mm) when only one-way shear fails — design.prefer = "thin"
+    (default).  design.prefer = "steel" skips the extra-steel step (thicker, less steel)."""
     mats, col = si["materials"], si["column"]
     D = si.get("design", {})
     opts = D.get("db_options", [12, 16, 20, 25])
+    factors = (1.0,) if D.get("prefer", "thin") == "steel" else (1.0, 1.15, 1.3, 1.5, 1.75, 2.0, 2.5)
     cx, cy = col["cx"], col["cy"]
     h = D.get("h_min", 300.0)
     notes = []
+    mk = lambda B, L, h, bx, by: Footing(B, L, h, cx, cy, mats["fc"], mats["fy"], si.get("cover", 75.0),
+                                         bx[0], by[0], bx[1], by[1])
     for _ in range(60):
         plan = _size_plan(si, h, cx, cy, mats["fc"], mats["fy"])
         if plan is None:
             return None, notes + ["หาขนาดฐานที่ผ่านแรงแบกทาน/พลิกคว่ำไม่ได้ — ตรวจ qa และแรง"]
         B, L = plan
-        f = Footing(B, L, h, cx, cy, mats["fc"], mats["fy"], si.get("cover", 75.0), opts[1], opts[1])
-        ult = strength_checks(si, f)
+        f0 = Footing(B, L, h, cx, cy, mats["fc"], mats["fy"], si.get("cover", 75.0), opts[1], opts[1])
+        ult = strength_checks(si, f0)
         if not all(r["sol"]["stable"] for r in ult):
             return None, notes + ["แรงประลัยทำให้แรงลัพธ์ออกนอกฐาน"]
-        ok = True
-        bars = {}
-        for d in ("x", "y"):
-            Mu = max(r["Mu"][d] for r in ult)
-            b = _choose_bars(f, Mu, d, opts)
-            if b is None:
-                ok = False
+        for k in factors:
+            bars = {}
+            f = f0
+            for _pass in range(2):                       # bar sizes change d: pick twice
+                ult = strength_checks(si, f)
+                for d in ("x", "y"):
+                    bars[d] = _choose_bars(f, max(r["Mu"][d] for r in ult), d, opts, k) or bars.get(d)
+                if not (bars.get("x") and bars.get("y")):
+                    break
+                f = mk(B, L, h, bars["x"], bars["y"])
+            if not (bars.get("x") and bars.get("y")):
                 break
-            bars[d] = b
-        if ok:
-            f = Footing(B, L, h, cx, cy, mats["fc"], mats["fy"], si.get("cover", 75.0),
-                        bars["x"][0], bars["y"][0], bars["x"][1], bars["y"][1])
-            # bar sizes change d: re-pick once with the real depths
-            ult = strength_checks(si, f)
-            for d in ("x", "y"):
-                bars[d] = _choose_bars(f, max(r["Mu"][d] for r in ult), d, opts) or bars[d]
-            f = Footing(B, L, h, cx, cy, mats["fc"], mats["fy"], si.get("cover", 75.0),
-                        bars["x"][0], bars["y"][0], bars["x"][1], bars["y"][1])
             res = evaluate(si, f)
             st = res["status"]
-            if all(st[k] for k in ("soil", "flexure", "shear")) and res["d_ok"] and \
-                    (res["dowel"]["ok"] if res["dowel"] else True):
+            punch_ok = all(r["punch"]["ok"] for r in res["ultimate"])
+            dowel_ok = res["dowel"]["ok"] if res["dowel"] else True
+            if all(st[k_] for k_ in ("soil", "flexure", "shear")) and res["d_ok"] and dowel_ok:
+                if k > 1:
+                    notes.append(f"เพิ่มเหล็กล่าง ×{k:g} ของที่ต้องการรับดัด เพื่อให้ Vc (ขึ้นกับ ρw) พอ — ฐานบางลงแทนการเพิ่มความหนา")
                 if not st["detailing"]:
                     notes.append("เหล็กล่างยื่นตรงไม่พอ ℓd — ต้องงอขอที่ปลาย (ดูข้อ 8)")
                 return f, notes
+            # extra steel only helps one-way shear; stop early if something else governs
+            if not punch_ok or not dowel_ok or not res["d_ok"] or not st["flexure"]:
+                break
         h += 50.0
     return None, notes + ["ความหนาเกิน 3 m แล้วยังไม่ผ่าน — ตรวจข้อมูล"]
 
 
 # ---------------------------------------------------------------- entry
+
+def quantities(f):
+    """Concrete (m³) and bottom steel (kg) — for comparing design alternatives."""
+    nx = math.floor((f.L - 2 * f.cover - f.dbx) / f.sx) + 1
+    ny = math.floor((f.B - 2 * f.cover - f.dby) / f.sy) + 1
+    kg = 7850e-9 * (nx * area(f.dbx) * (f.B - 2 * f.cover) + ny * area(f.dby) * (f.L - 2 * f.cover))
+    return f.B * f.L * f.h * 1e-9, kg
+
 
 def run(inp):
     si = to_si(inp)
@@ -271,6 +313,13 @@ def run(inp):
     mats, col = si["materials"], si["column"]
     if res["mode"] == "design":
         f, notes = design(si)
+        if f is not None and si.get("design", {}).get("prefer", "thin") == "thin" and any("เพิ่มเหล็กล่าง" in n for n in notes):
+            alt, _ = design(dict(si, design=dict(si.get("design", {}), prefer="steel")))
+            if alt is not None and alt.h > f.h:
+                c1, s1 = quantities(f)
+                c2, s2 = quantities(alt)
+                notes.append(f"ทางเลือก (design.prefer = \"steel\"): h = {alt.h:.0f} mm, DB{alt.dbx:g}@{alt.sx:.0f}/DB{alt.dby:g}@{alt.sy:.0f} "
+                             f"→ คอนกรีต {c2 - c1:+.2f} m³, เหล็กล่าง {s2 - s1:+.0f} kg เทียบแบบที่เลือก — ให้เทียบราคาวัสดุเอง")
         res["messages"] += [("INFO", "", n) for n in notes]
         if f is None:
             res["stopped"] = True

@@ -27,7 +27,7 @@ python3 skills/rc-column-aci318m19/scripts/column.py <input.json>
 python3 skills/rc-beam-aci318m19/scripts/beam.py <input.json>
 python3 skills/<skill>/scripts/from_staad.py model.std forces.txt --kind column|beam --member N --lc 101 102 --fc .. --fy .. -o in.json
 ```
-Test ปัจจุบัน: staadio 45, เสา 75, คาน 55, ฐานราก 37 — ต้องผ่านทั้งหมดก่อน commit · Python 3.11 ล้วน ไม่มี numpy
+Test ปัจจุบัน: staadio 45, เสา 75, คาน 55, ฐานราก 42 — ต้องผ่านทั้งหมดก่อน commit · Python 3.11 ล้วน ไม่มี numpy
 
 ## ข้อเท็จจริงที่ยืนยันแล้ว (ห้ามเปลี่ยนโดยไม่มีหลักฐาน)
 

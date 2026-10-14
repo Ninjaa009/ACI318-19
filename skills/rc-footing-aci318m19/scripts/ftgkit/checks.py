@@ -140,8 +140,28 @@ def development(f, direction, fy_spec):
             "ldh": hook, "hook_ok": avail >= hook}
 
 
-def dowel_embedment(f, db_col, fy_col):
-    """ℓdc of column bars/dowels must fit in the footing depth (§25.4.9)."""
-    need = ldc(db_col, fy_col, f.fc)
+def column_tension(si_col, ultimate):
+    """True if any factored combo puts the column section in tension at its base
+    (uncracked P/A − Mx/Sx − My/Sy < 0) — dowels then need tension development."""
+    cx, cy = si_col["cx"], si_col["cy"]
+    A, Sx, Sy = cx * cy, cx * cy * cy / 6.0, cy * cx * cx / 6.0
+    return any(cb["Pu"] / A - abs(cb.get("Mux") or 0) / Sx - abs(cb.get("Muy") or 0) / Sy < 0 for cb in ultimate)
+
+
+def dowel_embedment(f, db, fy, As_req=None, As_prov=None, allow_reduction=False, why_not=None, tension=False):
+    """ℓdc of the bars entering the footing must fit in its depth (§25.4.9);
+    §25.4.10: ℓdc × As,required/As,provided, not below 200 mm, when permitted."""
+    full = ldc(db, fy, f.fc)
+    ratio = None
+    if allow_reduction and As_req and As_prov and As_prov > As_req:
+        ratio = As_req / As_prov
+    need = max(full * ratio, 200.0) if ratio else full
     avail = f.h - f.cover - f.dbx - f.dby
-    return {"ldc": need, "avail": avail, "ok": avail >= need}
+    out = {"db": db, "ldc_full": full, "ratio": ratio, "ldc": need, "avail": avail, "ok": avail >= need,
+           "why_not": why_not, "tension": tension}
+    if tension:
+        # bars in tension at the column base: 90° hooks resting on the bottom mat (§25.4.3);
+        # ψo = 1.0 (side cover in a footing ≥ 6db), ψr = 1.6 (no confining ties assumed)
+        hk = ldh(db, fy, f.fc, psi_o=1.0)["ldh"]
+        out.update(ldh=hk, hook_ok=avail >= hk, ok=out["ok"] and avail >= hk)
+    return out

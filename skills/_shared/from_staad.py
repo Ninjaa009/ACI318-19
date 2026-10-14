@@ -5,7 +5,7 @@
           --fc 20 --fy 392.3 [--fyt 235.4] [--mode design|check] [--system OMF|IMF] \
           [--bars 20,3,3] [--ties 10,150] [--position interior|perimeter] [--support both_ends] -o input.json
   footing: --kind footing --member <column> --lc <ultimate ...> --lc-service <service ...>
-           --qa <kPa> [--qa-type gross|net] --Df <m> [--gamma-soil 18] [--mu 0.4] [--col-db 20]
+           --qa <kPa> [--qa-type gross|net] --Df <m> [--gamma-soil 18] [--mu 0.4] [--col-db 20 --col-n 8]
 
 FORCES.txt = STAAD table pasted as text: "Beam Section Forces" (needed for beams) or
 "Beam End Forces" (columns only).  Units in STAAD must be kN and m.
@@ -45,6 +45,7 @@ def main(argv=None):
     ap.add_argument("--gamma-soil", type=float, default=18.0, help="kN/m³")
     ap.add_argument("--mu", type=float, help="footing: base friction coefficient")
     ap.add_argument("--col-db", type=float, help="footing: column bar size (dowel ℓdc check)")
+    ap.add_argument("--col-n", type=int, help="footing: number of column bars entering the footing (§25.4.10)")
     ap.add_argument("-o", "--out")
     a = ap.parse_args(argv)
     model = staadio.Model(open(a.std, encoding="utf-8", errors="replace").read())
@@ -67,6 +68,8 @@ def main(argv=None):
         col = dict(p["column"])
         if a.col_db:
             col["db"] = a.col_db
+        if a.col_n:
+            col["n"] = a.col_n
         soil = {"qa": a.qa, "qa_type": a.qa_type, "Df": a.Df, "gamma": a.gamma_soil}
         if a.mu:
             soil["mu"] = a.mu

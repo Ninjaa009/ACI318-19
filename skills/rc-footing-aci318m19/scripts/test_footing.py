@@ -102,7 +102,7 @@ rt = run(thin)
 check("check mode h = 0.30 → shear fails", rt["status"]["shear"], False)
 si_in = copy.deepcopy(inp)
 si_in["units"] = "SI"
-si_in["column"] = {"cx": 400, "cy": 400, "db": 20}
+si_in["column"] = {"cx": 400, "cy": 400, "db": 20, "n": 8}
 si_in["materials"] = {k: v * 0.0980665 for k, v in inp["materials"].items()}
 si_in["soil"] = {"qa": 15 * G, "qa_type": "gross", "Df": 1.5, "gamma": 1.8 * G, "mu": 0.4}
 si_in["gamma_c"] = 2.4 * G
@@ -118,6 +118,17 @@ big_m["service"][0]["My"] = 60000
 rb = run(big_m)
 check("large moment → partial contact handled", rb["service"][0]["sol"]["full"] is False or rb["service"][0]["sol"]["full"] is True, True)
 check("large moment design still passes", all(rb["status"].values()), True)
+thin = r
+std = run(dict(inp, design=dict(inp["design"], prefer="steel")))
+check("prefer=steel is never thinner than the default (thin)", std["f"].h >= thin["f"].h, True)
+nored = run(dict(inp, ldc_reduction=False))
+check("without §25.4.10 the dowel ℓdc is the full value", nored["dowel"]["ldc"], nored["dowel"]["ldc_full"], 1e-9)
+check("§25.4.10: ℓdc = max(ratio·ℓdc, 200)", r["dowel"]["ldc"], max(r["dowel"]["ldc_full"] * 800 / (8 * math.pi * 100), 200), 1e-6)
+tens = copy.deepcopy(inp)
+tens["ultimate"][0]["Muy"] = 12000   # > P·S/A = 8,333 kgf·m → tension
+check("column tension at base → no §25.4.10 reduction", run(dict(tens, mode="design"))["dowel"]["ratio"], None)
+rt2 = run(dict(tens, mode="design"))
+check("column tension → hooked dowels checked (ℓdh, ψo = 1.0)", rt2["dowel"]["tension"] and "ldh" in rt2["dowel"], True)
 check("SDC D stops", run(dict(inp, sdc="D")).get("stopped"), True)
 check("missing service combos stops", run(dict(inp, service=[])).get("stopped"), True)
 
