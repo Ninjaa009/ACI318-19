@@ -12,6 +12,7 @@
    - `skills/rc-column-aci318m19/` — แพ็กเกจ `scripts/colkit` (เสาปลอกเดี่ยว, 3D interaction, ชะลูด, OMF/IMF, design/check)
    - `skills/rc-beam-aci318m19/` — แพ็กเกจ `scripts/beamkit` (คานทั้งช่วง ซ้าย/กลาง/ขวา ทุก combo, OMF/IMF, design/check)
    - `skills/rc-footing-aci318m19/` — แพ็กเกจ `scripts/ftgkit` (ฐานแผ่เดี่ยวบนดิน, qa ยอมให้ + combo ใช้งาน, กำลังด้วย combo ประลัย, design/check)
+   - `skills/rc-slab-aci318m19/` — แพ็กเกจ `scripts/slabkit` (พื้นบนคาน grid หลายแผง, สองทาง Method 2 / ทางเดียว T6.5.2, αf จาก beam_depth, น้ำหนักลงคาน) — ได้เฉพาะ rcsi.py จาก _shared (ไม่ใช้ STAAD)
    - ทุกสกิลมี `kb/` (สำเนาบทที่เกี่ยวข้อง), `references/`, `examples/`, และรายงานอ้าง `kb/…` ทุกหัวข้อ
 3. **โมดูลร่วม** `skills/_shared/` — แก้ที่นี่เท่านั้น แล้วรัน build
    - `rcsi.py` หน่วย/ค่าคงที่ SI/ℓd/ทาบ/รูปแบบรายงาน
@@ -27,7 +28,7 @@ python3 skills/rc-column-aci318m19/scripts/column.py <input.json>
 python3 skills/rc-beam-aci318m19/scripts/beam.py <input.json>
 python3 skills/<skill>/scripts/from_staad.py model.std forces.txt --kind column|beam --member N --lc 101 102 --fc .. --fy .. -o in.json
 ```
-Test ปัจจุบัน: staadio 45, เสา 75, คาน 55, ฐานราก 42 — ต้องผ่านทั้งหมดก่อน commit · Python 3.11 ล้วน ไม่มี numpy
+Test ปัจจุบัน: staadio 45, เสา 75, คาน 55, ฐานราก 42, พื้น 61 — ต้องผ่านทั้งหมดก่อน commit · Python 3.11 ล้วน ไม่มี numpy
 
 ## ข้อเท็จจริงที่ยืนยันแล้ว (ห้ามเปลี่ยนโดยไม่มีหลักฐาน)
 
@@ -57,3 +58,4 @@ Test ปัจจุบัน: staadio 45, เสา 75, คาน 55, ฐาน
 - เทียบ Ch.15/18 กับเล่ม 318M-19 เมื่อผู้ใช้ส่งมา
 - ฐานราก: ผู้ใช้เลือก "ฐานแผ่บนดิน + qa แบบยอมให้" ก่อน — ยังไม่มี pile cap (ถ้าจะทำ ใช้ checks/pressure ร่วม)
 - ฐานราก one-way shear ใช้ T22.5.5.1(c) (ไม่มีเหล็กเฉือน, λs = 1) — มักคุมความหนา
+- พื้น: ผู้ใช้เลือก "พื้นบนคาน ทางเดียว + สองทาง" และ "Method 2" — Method 2 มาจาก ACI 318-63 (ไม่ใช่ 318-19) ต้องระบุในรายงานเสมอ · ขอบต่อเนื่องใช้ค่ามากของสองแผง · ยังไม่มี flat slab/พื้นยื่น/น้ำหนักจุด · ทางเลือกต่อ: ส่งน้ำหนักลงคานเข้าสกิลคานอัตโนมัติ

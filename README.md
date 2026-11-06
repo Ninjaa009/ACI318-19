@@ -40,5 +40,6 @@
 | `rc-beam-aci318m19` | ออกแบบ/ตรวจคาน คสล. ทั้งช่วง (ปลายซ้าย กลาง ปลายขวา) ทุก combo | `scripts/beamkit` |
 | `rc-column-aci318m19` | ออกแบบ/ตรวจเสา คสล. ปลอกเดี่ยว ดัดสองแกน | `scripts/colkit` |
 | `rc-footing-aci318m19` | ออกแบบ/ตรวจฐานรากแผ่เดี่ยวบนดิน (qa ยอมให้) | `scripts/ftgkit` |
+| `rc-slab-aci318m19` | ออกแบบ/ตรวจพื้นบนคาน ทางเดียว + สองทาง (Method 2) พร้อมน้ำหนักลงคาน | `scripts/slabkit` |
 
 ทุกสกิลใช้โครงสร้างเดียวกัน (workflow เป็นขั้น, JSON แบ่งกลุ่ม, โหมด design/check, รายงานอ้าง `kb/` ทุกหัวข้อ) และใช้โมดูลร่วมใน `skills/_shared/` — `rcsi.py` (หน่วย ค่าคงที่ SI ℓd/ทาบ รูปแบบรายงาน) และ `staadio.py` + `from_staad.py` (แปลงผล STAAD.Pro ตาม sign convention ที่ทดสอบกับผลจริงใน `_shared/tests`) — แก้ที่ไฟล์นี้เท่านั้น แล้วรัน `python3 tools/build_skills.py` เพื่อคัดลอกเข้าแต่ละสกิล รัน test และสร้าง `dist/*.zip`

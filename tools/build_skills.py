@@ -18,7 +18,10 @@ SKILLS = {   # skill: (package dir, test)
     "rc-column-aci318m19": ("scripts/colkit", "scripts/test_column.py"),
     "rc-beam-aci318m19": ("scripts/beamkit", "scripts/test_beam.py"),
     "rc-footing-aci318m19": ("scripts/ftgkit", "scripts/test_footing.py"),
+    "rc-slab-aci318m19": ("scripts/slabkit", "scripts/test_slab.py"),
 }
+# skills that do not read STAAD output get only the shared design helpers
+SYNC_ONLY = {"rc-slab-aci318m19": ("rcsi.py",)}
 # shared file → destination relative to the package dir
 SYNC = {"rcsi.py": "rcsi.py", "staadio.py": "staadio.py", "from_staad.py": "../from_staad.py",
         "staad-sign-convention.md": "../../references/staad-sign-convention.md"}
@@ -37,6 +40,8 @@ def main(argv):
         pkg = os.path.join(sk, pkg_rel)
         diffs = []
         for src, rel in SYNC.items():
+            if name in SYNC_ONLY and src not in SYNC_ONLY[name]:
+                continue
             s_, d_ = os.path.join(SHARED_DIR, src), os.path.normpath(os.path.join(pkg, rel))
             if check_only:
                 if not (os.path.exists(d_) and filecmp.cmp(s_, d_, shallow=False)):

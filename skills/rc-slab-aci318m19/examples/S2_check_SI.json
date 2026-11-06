@@ -1,0 +1,13 @@
+{
+ "mode": "check",
+ "units": "SI",
+ "grid": {"x": [5.0, 5.0], "y": [5.0, 3.0]},
+ "missing": ["BC-23"],
+ "beam_width": 0.25,
+ "beam_depth": 0.45,
+ "materials": {"fc": 24, "fy": 392.3},
+ "loads": {"sdl": 1.5, "ll": 3.0},
+ "gamma_c": 23.6,
+ "h": 120,
+ "bars": {"bottom": {"db": 10, "s": 200}, "top": {"db": 12, "s": 200}}
+}

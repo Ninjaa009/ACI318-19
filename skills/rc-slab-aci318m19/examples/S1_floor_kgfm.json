@@ -1,0 +1,10 @@
+{
+ "mode": "design",
+ "units": "kgf-m",
+ "grid": {"x": [4.5, 4.5, 4.5], "y": [4.0, 2.0]},
+ "beam_width": 0.25,
+ "materials": {"fc": 240, "fy": 4000},
+ "loads": {"sdl": 150, "ll": 300},
+ "cover": 20,
+ "design": {"h_min": 100, "db_options": [10, 12]}
+}
